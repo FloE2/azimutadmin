@@ -273,6 +273,10 @@ const ncls=n=>n==null?'':n>=14?'n-g':n>=10?'n-m':'n-b';
 
 /* ---------- état d'interface ---------- */
 let UI=Object.assign({role:'home',cls:'4A',tab:'suivi',pcourse:null,tcourse:null,atab:'feuilles',sel:[],absMode:false,modal:null},LS.get('co-ui',{}),{modal:null,sel:[]});
+/* liens directs : #prof-4A, #prof-4B, #prof-U, #tablette-4A, #tablette-4B, #admin */
+(()=>{const h=location.hash.slice(1).toLowerCase(),m=h.match(/^(prof|tablette)-(4a|4b|u)$/);
+ if(m){UI.role=m[1]==='prof'?'prof':'tab';UI.cls=m[2]==='u'?'4A':m[2].toUpperCase();UI.me=m[2]==='u'?'U':UI.cls;UI.tab='suivi'}else if(h==='admin')UI.role='admin';
+ if(h){LS.set('co-ui',{...LS.get('co-ui',{}),role:UI.role,cls:UI.cls,me:UI.me,tab:UI.tab});history.replaceState(null,'',location.pathname+location.search)}})();
 const saveUI=()=>LS.set('co-ui',{me:UI.me,role:UI.role,cls:UI.cls,tab:UI.tab,pcourse:UI.pcourse,tcourse:UI.tcourse,atab:UI.atab});
 let pend=false,CB=null;
 function scheduleRender(){const a=document.activeElement;if(a&&a.matches('input,textarea,select')&&a.type!=='checkbox'){pend=true;return}render()}
