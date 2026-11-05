@@ -271,9 +271,9 @@ function vHome(){const g=G();
 /* ---------- PROF ---------- */
 function vProf(){
  const cls=UI.cls;let body='';
- if(UI.tab==='suivi')body=vSuivi(cls);else if(UI.tab==='comp')body=vComp(cls);else if(UI.tab==='bilan')body=vBilan(cls);else if(UI.tab==='bin')body=vBinomes(cls);else if(UI.tab==='admin')body=seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')+'<div style="height:10px"></div>'+vAdminBody();else body=vSecu(cls);
+ if(UI.tab==='suivi')body=vSuivi(cls);else if(UI.tab==='comp')body=vComp(cls);else if(UI.tab==='bilan')body=vBilan(cls);else if(UI.tab==='mat')body=vMat();else if(UI.tab==='bin')body=vBinomes(cls);else if(UI.tab==='admin')body=seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')+'<div style="height:10px"></div>'+vAdminBody();else body=vSecu(cls);
  return `<div class="top"><button data-a="home">⌂</button><h1>${esc(profName(UI.me||cls))}</h1>${seg([['4A','4A'],['4B','4B']],cls,'cls')}${status()}
- <div style="width:100%">${seg([['suivi','Suivi live'],['comp','Comportement'],['bilan','Bilan'],['bin','Binômes'],['secu','Sécurité'],['admin','Admin']],UI.tab,'tab')}</div></div><main>${body}</main>`}
+ <div style="width:100%">${seg([['suivi','Suivi live'],['comp','Comportement'],['bilan','Bilan'],['bin','Binômes'],['mat','Matériel'],['secu','Sécurité'],['admin','Admin']],UI.tab,'tab')}</div></div><main>${body}</main>`}
 
 function curCourse(cls,which){return UI[which]||S.active?.[cls]||'etoile'}
 function courseSeg(cls,which){const act=S.active?.[cls];const cur=curCourse(cls,which);
@@ -319,6 +319,19 @@ function vBilan(cls){const N=coNotes(cls);
  <div class="tw"><table><tr><th>Élève</th><th class="c">Comport.</th><th class="c">CO</th>${ORDER.map(id=>`<th class="c">${C(id).short}</th>`).join('')}<th class="c">✔/✘</th><th>Remarques</th></tr>
  ${rows.map(({s,b,n,ev})=>`<tr ${absent(s.id)?'class="mut"':''}><td>${esc(s.nom)} ${esc(s.prenom)}${absent(s.id)?' (abs.)':''}</td><td class="c"><span class="note ${ncls(b)}">${b}</span>${behDetail(s.id)?`<div class="small mut">${esc(behDetail(s.id))}</div>`:''}</td><td class="c"><span class="note ${ncls(n.avg)}">${n.avg??'–'}</span></td>${ORDER.map(id=>`<td class="c small">${n.per[id]??''}</td>`).join('')}<td class="c small">${n.ok}/${n.err}</td><td class="small">${ev.map(e=>esc(BEHM[e.k]?.t+(e.txt?' : '+e.txt:'')+' ('+profName(who(e))+')')).join(' ; ')}</td></tr>`).join('')}</table></div>`}
 
+const MATDEF=[['m1','Cartons de contrôle'],['m2','Cartes des 4 parcours (Étoile, Relais, V/F/M, Score)'],['m3','Pochettes plastiques (1 par binôme)'],['m4','Pieds pour iPad ×2'],['m5','Talkies-walkies']];
+function vMat(){
+ if(!S.matInit){const o={matInit:true};MATDEF.forEach(([id,t],i)=>o['mat/'+id]={t,n:i});setTimeout(()=>DB.update(o));}
+ const items=S.matInit?Object.entries(S.mat||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(a.n||0)-(b.n||0)):MATDEF.map(([id,t],i)=>({id,t,n:i}));
+ const nb=['4A','4B'].reduce((a,c)=>a+binomes(c).length,0),est=['4A','4B'].reduce((a,c)=>a+Math.floor(clsStu(c).filter(x=>!absent(x.id)).length/2),0);
+ const hint=id=>id==='m3'?` <span class="small mut">→ ${nb?nb+' binômes créés':'≈ '+est+' binômes'}</span>`:'';
+ const ok=items.filter(i=>i.done).length;
+ return `<p class="small mut">Liste partagée entre les 3 téléphones : cochez au fur et à mesure. ${ok}/${items.length} prêts.</p>
+ <div class="grid" style="grid-template-columns:1fr;gap:6px">${items.map(i=>`<div class="card ${i.done?'st-done':''}" style="display:flex;align-items:center;gap:10px">
+  <input type="checkbox" style="width:24px;height:24px" data-f="mat/${i.id}/done" ${i.done?'checked':''}>
+  <span style="flex:1;${i.done?'text-decoration:line-through;color:var(--mut)':''}">${esc(i.t)}${hint(i.id)}</span>
+  <button class="link" data-a="delmat" data-v="${i.id}">✕</button></div>`).join('')}</div>
+ <div class="flex" style="margin-top:12px"><input id="newmat" placeholder="Ajouter (ex : trousse de secours)" style="flex:1;min-width:200px"><button class="go" data-a="addmat">Ajouter</button></div>`}
 function vSecu(cls){const g=G();
  return `<div class="secu">
  <div class="info"><b>Point de rassemblement :</b> ${esc(g.rally)||'<i>à renseigner dans Admin › Réglages</i>'}<br>
@@ -475,6 +488,8 @@ const A={
   for(let i=0;i<f.length;i+=2){let m=f.slice(i,i+2);if(f.length-i===3){m=f.slice(i,i+3);i++}o[`binomes/${cls}/${uid()+i}`]={n:n++,m}}
   UI.sel=[];DB.update(o)},
  resetb(){const cls=UI.cls;ask(`Supprimer les ${binomes(cls).length} binômes de la ${cls} (et les équipes de relais) ? Les résultats déjà faits sont conservés.`,()=>{UI.sel=[];DB.update({['binomes/'+cls]:null,['teams/'+cls]:null});toast('Binômes remis à zéro')})},
+ addmat(){const i=$('#newmat'),t=i.value.trim();if(!t)return;i.value='';const n=Math.max(0,...Object.values(S.mat||{}).map(x=>x.n||0))+1;DB.update({['mat/'+uid()]:{t,n}})},
+ delmat(d){const it=S.mat?.[d.v];ask(`Retirer « ${it?it.t:''} » de la liste ?`,()=>DB.update({['mat/'+d.v]:null}))},
  resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
@@ -534,6 +549,7 @@ function dl(name,txt,type){const a=document.createElement('a');a.href=URL.create
 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;if(el.id==='modal')return;const f=A[el.dataset.a];if(f){e.preventDefault();f(el.dataset,el)}});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&UI.modal&&UI.modal.t!=='kp'){UI.modal=null;render()}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='newmat'){e.preventDefault();A.addmat()}});
 document.addEventListener('change',e=>{const el=e.target;
  if(el.dataset.f)DB.update({[el.dataset.f]:el.checked?true:null});
  else if(el.dataset.s){let v=el.value;if(el.type==='number')v=+v;DB.update({[el.dataset.s]:v});toast('Enregistré')}
