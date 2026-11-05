@@ -262,7 +262,7 @@ function vHome(){const g=G();
  <h2>Cet appareil est…</h2>
  <button data-a="go" data-r="prof" data-c="4A">📱 Téléphone prof – 4A (${esc(g.name4A)})</button>
  <button data-a="go" data-r="prof" data-c="4B">📱 Téléphone prof – 4B (${esc(g.name4B)})</button>
- <button data-a="go" data-r="prof" data-c="4A" data-me="U">📱 Téléphone prof volant – 4A + 4B (${esc(g.nameU)})</button>
+ <button data-a="go" data-r="prof" data-c="4A" data-me="U">📱 Téléphone prof – 4A + 4B (${esc(g.nameU)})</button>
  <button data-a="go" data-r="tab" data-c="4A">📋 Tablette élèves – 4A</button>
  <button data-a="go" data-r="tab" data-c="4B">📋 Tablette élèves – 4B</button>
  <button data-a="go" data-r="admin">🗂 Admin : feuilles, réglages, connexion</button>
@@ -271,9 +271,9 @@ function vHome(){const g=G();
 /* ---------- PROF ---------- */
 function vProf(){
  const cls=UI.cls;let body='';
- if(UI.tab==='suivi')body=vSuivi(cls);else if(UI.tab==='comp')body=vComp(cls);else if(UI.tab==='bilan')body=vBilan(cls);else if(UI.tab==='bin')body=vBinomes(cls);else body=vSecu(cls);
+ if(UI.tab==='suivi')body=vSuivi(cls);else if(UI.tab==='comp')body=vComp(cls);else if(UI.tab==='bilan')body=vBilan(cls);else if(UI.tab==='bin')body=vBinomes(cls);else if(UI.tab==='admin')body=seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')+'<div style="height:10px"></div>'+vAdminBody();else body=vSecu(cls);
  return `<div class="top"><button data-a="home">⌂</button><h1>${esc(profName(UI.me||cls))}</h1>${seg([['4A','4A'],['4B','4B']],cls,'cls')}${status()}
- <div style="width:100%">${seg([['suivi','Suivi live'],['comp','Comportement'],['bilan','Bilan'],['bin','Binômes'],['secu','Sécurité']],UI.tab,'tab')}</div></div><main>${body}</main>`}
+ <div style="width:100%">${seg([['suivi','Suivi live'],['comp','Comportement'],['bilan','Bilan'],['bin','Binômes'],['secu','Sécurité'],['admin','Admin']],UI.tab,'tab')}</div></div><main>${body}</main>`}
 
 function curCourse(cls,which){return UI[which]||S.active?.[cls]||'etoile'}
 function courseSeg(cls,which){const act=S.active?.[cls];const cur=curCourse(cls,which);
@@ -284,6 +284,9 @@ function vSuivi(cls){
  const cnt=k=>all.filter(s=>s.status===k).length;
  const alerts=all.filter(s=>(s.out&&now()-s.out.d>2*g.alert*60000)||(s.r.start&&!s.r.finish&&s.late>0));
  let h=`${courseSeg(cls,'pcourse')}<p class="small mut">● = carte ouverte sur la tablette. Limite ${c.limit} min · pénalité ${c.penalty} pt / 30 s de retard. <button class="link" data-a="map" data-v="${cid}">Voir la carte</button></p>`;
+ h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
+ ${c.type==='relay'&&g.relayMode==='binomes'&&!all.some(s=>s.r.start)?`<button data-a="mkteams">${teams(cls).length?'Refaire':'Former'} les équipes de relais (2 binômes)</button>`:''}
+ ${(c.type==='vfm'||c.type==='score')&&all.some(s=>s.status==='idle')?`<button class="go" data-a="startall" data-c="${cid}">▶ Départ groupé</button>`:''}</div>`;
  if(alerts.length)h+=`<div class="banner">⚠ À surveiller : ${alerts.map(s=>s.u.label+' ('+names(s.u.m)+')').join(', ')}</div>`;
  if(!all.length)return h+`<p class="info">Aucun ${c.type==='relay'&&g.relayMode==='binomes'?'équipe de relais':'binôme'} pour la ${cls}. Créez-les dans l'onglet Binômes${c.type==='relay'?' puis sur la tablette (onglet Relais)':''}.</p>`;
  h+=`<p><span class="pill b">${cnt('out')} en course</span> <span class="pill">${cnt('base')+cnt('arrived')} à la base</span> <span class="pill ok">${cnt('done')} terminés</span> <span class="pill">${cnt('idle')} pas partis</span></p><div class="grid">`;
@@ -319,7 +322,7 @@ function vBilan(cls){const N=coNotes(cls);
 function vSecu(cls){const g=G();
  return `<div class="secu">
  <div class="info"><b>Point de rassemblement :</b> ${esc(g.rally)||'<i>à renseigner dans Admin › Réglages</i>'}<br>
- <b>Prof 4A</b> (${esc(g.name4A)}) : ${esc(g.phone4A)||'–'} · <b>Prof 4B</b> (${esc(g.name4B)}) : ${esc(g.phone4B)||'–'} · <b>Volant</b> (${esc(g.nameU)}) : ${esc(g.phoneU)||'–'}<br>
+ <b>Prof 4A</b> (${esc(g.name4A)}) : ${esc(g.phone4A)||'–'} · <b>Prof 4B</b> (${esc(g.name4B)}) : ${esc(g.phone4B)||'–'} · <b>Prof 4A + 4B</b> (${esc(g.nameU)}) : ${esc(g.phoneU)||'–'}<br>
  <b>Urgence parcs des Hauts-de-Seine :</b> <a href="tel:0141872860">01 41 87 28 60</a> · <b>SAMU</b> <a href="tel:15">15</a> · <b>Urgences</b> <a href="tel:112">112</a></div>
  ${SECU}</div>`}
 
@@ -345,20 +348,15 @@ function vBinomes(cls){
 
 /* ---------- TABLETTE ---------- */
 function vTab(){
- const cls=UI.cls,t=UI.tcourse||S.active?.[cls]||'etoile';let body;
- if(t==='bin')body=vBinomes(cls);else if(t==='secu')body=vSecu(cls);else body=vRun(cls,t);
- const tabs=[...ORDER.map(id=>[id,C(id).short]),['bin','Binômes'],['secu','Sécurité']];
- return `<div class="top"><button data-a="lock">⚙</button><h1>Tablette ${cls}</h1>${status()}<div style="width:100%">${seg(tabs,t,'tc')}</div></div><main>${body}</main>`}
+ const cls=UI.cls,act=S.active?.[cls],t=UI.ttab==='secu'?'secu':'run';
+ const body=t==='secu'?vSecu(cls):act?vRun(cls,act):`<p class="info">En attente : le professeur n'a pas encore lancé de parcours.</p>`;
+ const tabs=[['run',act?C(act).name:'Parcours'],['secu','Sécurité']];
+ return `<div class="top"><button data-a="lock">⚙</button><h1>Tablette ${cls}</h1>${status()}<div style="width:100%">${seg(tabs,t,'tt')}</div></div><main>${body}</main>`}
 
 function vRun(cls,cid){
- const c=C(cid),g=G(),{all,done}=ranking(cid,cls);
+ const c=C(cid),{all,done}=ranking(cid,cls);
  let h=`<div class="info"><b>${c.name}</b> · ${esc(c.desc)}<br><span class="small">Temps limite ${c.limit} min · −${c.penalty} pt par tranche de 30 s de retard. <button class="link" data-a="map" data-v="${cid}">Voir la carte</button></span></div>`;
- if(c.type==='relay'&&g.relayMode==='binomes'){
-  const ts=teams(cls),started=all.some(s=>s.r.start);
-  if(!ts.length||!started)h+=`<div class="flex"><button data-a="mkteams">${ts.length?'Refaire':'Former'} les équipes de relais (2 binômes par équipe)</button></div>`;
- }
- if(!all.length)return h+`<p class="info">Rien à afficher : créez d'abord les binômes (onglet Binômes).</p>`;
- if((c.type==='vfm'||c.type==='score')&&all.some(s=>s.status==='idle'))h+=`<button class="big go" data-a="startall">▶ Départ groupé de tous les binômes</button>`;
+ if(!all.length)return h+`<p class="info">En attente : le professeur prépare les ${c.type==='relay'&&G().relayMode==='binomes'?'équipes':'binômes'}.</p>`;
  h+=`<div class="grid" style="margin-top:10px">`;
  all.forEach(s=>{h+=`<div class="card st-${s.status}"><div class="row"><b style="font-size:1.2rem">${s.u.label}</b><span class="names">${esc(names(s.r.m||s.u.m))}</span>${chrono(s)}</div>${tabCard(s,cid)}</div>`});
  h+=`</div>`;
@@ -368,21 +366,21 @@ function vRun(cls,cid){
 function tabCard(s,cid){const c=s.c,id=s.u.id,d=`data-c="${cid}" data-v="${id}"`;
  if(c.type==='star'||c.type==='relay'){
   if(s.status==='done')return `<p>Terminé · <b>${s.final} pts</b> ${s.pen?`(−${s.pen} retard)`:''} · ✔${s.ok} ✘${s.err} ${s.rank?'· <b>'+s.rank+'e</b>':''}</p>`;
-  if(s.status==='out')return `<p>→ balise <b style="font-size:1.3rem">${s.out.b}</b>${s.out.lbl?' · '+esc(s.out.lbl):''} · depuis <span data-since="${s.out.d}" data-alert="${G().alert}"></span></p><button class="big back" data-a="ret" ${d}>⏎ Retour : saisir le code</button><div class="row"><button class="link" data-a="undo" ${d}>annuler ce départ</button></div>`;
+  if(s.status==='out')return `<p>→ balise <b style="font-size:1.3rem">${s.out.b}</b>${s.out.lbl?' · '+esc(s.out.lbl):''} · depuis <span data-since="${s.out.d}" data-alert="${G().alert}"></span></p><button class="big back" data-a="ret" ${d}>⏎ Retour : saisir le code</button>${now()-s.out.d<30000?`<div class="row" data-exp="${s.out.d+30000}"><button class="link" data-a="undo" ${d}>annuler ce départ (erreur)</button></div>`:''}`;
   const last=s.last?`<p class="small">${s.last.ok?'✔':'✘'} balise ${s.last.b} ${s.last.ok?'juste':'fausse'} · ✔${s.ok} ✘${s.err}</p>`:'';
   const run=s.runner?`<p class="small">Relayeur : <b>${esc(s.runner.label)}</b> ${esc(s.runner.sub||'')}</p>`:'';
   return `${last}${run}<button class="big go" data-a="dep" ${d}>▶ Départ → balise ${s.next}${s.retry?' (2e essai)':''}</button>
-  <div class="row">${s.retry?`<button class="link" data-a="skip" ${d}>passer la balise ${s.next}</button>`:'<span></span>'}${s.status==='base'?`<button class="link" data-a="fin" ${d}>terminer</button>`:''}</div>`;
+`;
  }
  if(s.status==='idle')return `<button class="big go" data-a="dep" ${d}>▶ Départ</button>`;
  if(s.status==='out')return `<p><span data-left="${s.r.start}" data-lim="${c.limit}" data-pen="${c.penalty}"></span></p><button class="big back" data-a="arr" ${d}>⏹ Arrivée</button>`;
  if(s.status==='arrived')return `<p>Arrivé en ${fmt(s.elapsed)}</p><button class="big back" data-a="sheet" ${d}>✎ Saisir le carton</button>`;
- return `<p>Terminé · <b>${s.final} pts</b> ${s.pen?`(−${s.pen} retard)`:''} · ${s.rank?'<b>'+s.rank+'e</b>':''}</p><button class="link" data-a="sheet" ${d}>corriger la saisie</button>`;
+ return `<p>Terminé · <b>${s.final} pts</b> ${s.pen?`(−${s.pen} retard)`:''} · ${s.rank?'<b>'+s.rank+'e</b>':''}</p>`;
 }
 
 /* ---------- ADMIN ---------- */
-function vAdmin(){let b;
- if(UI.atab==='feuilles')b=vForms();else if(UI.atab==='reg')b=vReg();else b=vData();
+function vAdminBody(){return UI.atab==='reg'?vReg():UI.atab==='data'?vData():vForms()}
+function vAdmin(){const b=vAdminBody();
  return `<div class="top"><button data-a="home">⌂</button><h1>Admin</h1>${status()}<div style="width:100%">${seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')}</div></div><main>${b}</main>`}
 function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on':''}" data-a="only">${UI.only?'✔ ':''}Seulement les dossiers incomplets</button><button data-a="print">Imprimer</button></div>`;
  for(const cls in STUDENTS){const L=clsStu(cls),f=s=>S.forms?.[s.id]||{};
@@ -392,7 +390,7 @@ function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on'
   <td class="c"><input type="checkbox" data-f="forms/${s.id}/s" ${f(s).s?'checked':''}></td><td class="c"><input type="checkbox" data-f="forms/${s.id}/i" ${f(s).i?'checked':''}></td><td class="c"><input type="checkbox" data-f="absent/${s.id}" ${absent(s.id)?'checked':''}></td></tr>`).join('')}</table></div>`}
  return h}
 function vReg(){const g=G();const f=(k,l,t='text')=>`<label>${l}<input type="${t}" data-s="settings/g/${k}" value="${esc(g[k])}"></label>`;
- let h=`<div class="form"><h2>Général</h2>${f('rally','Point de rassemblement')}${f('name4A','Prof 4A')}${f('phone4A','Téléphone prof 4A','tel')}${f('name4B','Prof 4B')}${f('phone4B','Téléphone prof 4B','tel')}${f('nameU','Prof volant')}${f('phoneU','Téléphone prof volant','tel')}
+ let h=`<div class="form"><h2>Général</h2>${f('rally','Point de rassemblement')}${f('name4A','Prof 4A')}${f('phone4A','Téléphone prof 4A','tel')}${f('name4B','Prof 4B')}${f('phone4B','Téléphone prof 4B','tel')}${f('nameU','Prof 4A + 4B')}${f('phoneU','Téléphone prof 4A + 4B','tel')}
  ${f('alert','Alerte si un binôme est parti vers une balise depuis plus de (min) — rouge au double','number')}${f('base','Note de comportement de départ (/20)','number')}${f('pin','Code pour quitter le mode tablette')}
  <label>Relais étoile : qui se relaie ?<select data-s="settings/g/relayMode"><option value="binomes" ${g.relayMode==='binomes'?'selected':''}>Deux binômes se relaient (respecte « binôme indissociable »)</option><option value="eleves" ${g.relayMode==='eleves'?'selected':''}>Les 2 élèves du binôme se relaient (comme le livre)</option></select></label>`;
  ORDER.forEach(id=>{const c=C(id),p=`settings/courses/${id}/`;
@@ -433,7 +431,13 @@ function vModal(){const m=UI.modal;
   return `<h3>${u.label} · ${C(cid).name}</h3>
   <div class="flex">${(s.r.m||u.m).map(sid=>`<button data-a="beh" data-v="${sid}">${esc(STU[sid].short)} <span class="note ${ncls(behNote(sid))}">${behNote(sid)}</span></button>`).join('')}</div>
   <p>${line(s)}</p>${s.legs?`<div class="tw"><table><tr><th>Balise</th><th>Parti à</th><th>Durée</th><th>Code</th><th></th></tr>${s.legs.map(l=>`<tr><td>${l.b}</td><td>${l.d?hm(l.d):''}</td><td>${l.r?fmt(l.r-l.d):''}</td><td>${esc(l.code||'')}</td><td>${l.skip?'passée':l.ok?'✔':'✘'}${l.lbl?' '+esc(l.lbl):''}</td></tr>`).join('')}</table></div>`:''}
-  ${s.r.start&&!s.r.finish?`<button class="big kobtn" data-a="fin" data-c="${cid}" data-v="${u.id}">Arrêter son chrono maintenant</button>`:''}
+  ${(()=>{const d=`data-c="${cid}" data-v="${u.id}"`;let b='';
+   if(s.status==='out'&&s.out)b+=`<button class="big" data-a="undo" ${d}>Annuler le départ en cours</button>`;
+   if(s.status==='base'&&s.next)b+=`<button class="big" data-a="skip" ${d}>Passer la balise ${s.next}</button>`;
+   if(s.status==='arrived'||s.status==='done'&&(C(cid).type==='vfm'||C(cid).type==='score'))b+=`<button class="big" data-a="sheet" ${d}>✎ ${s.status==='done'?'Corriger':'Saisir'} le carton</button>`;
+   if(s.r.start&&!s.r.finish)b+=`<button class="big kobtn" data-a="fin" ${d}>Arrêter son chrono maintenant</button>`;
+   if(s.r.start)b+=`<button class="link" data-a="resetrun" ${d}>remettre ce parcours à zéro pour ${u.label}</button>`;
+   return b})()}
   <button class="big" data-a="close">Fermer</button>`}
  if(m.t==='map')return `<h3>${C(m.v).name}</h3><img class="mapimg" src="${MAPS[m.v]}" alt="Carte"><button class="big" data-a="close">Fermer</button>`;
  if(m.t==='pin')return `<h3>Quitter le mode tablette</h3><input id="pin" type="password" inputmode="numeric" placeholder="code" style="width:100%;font-size:1.4rem"><button class="big go" data-a="unlock">Valider</button><button class="link" data-a="close">annuler</button>`;
@@ -450,7 +454,8 @@ const A={
  tab(d){UI.tab=d.v;saveUI();render()},
  at(d){UI.atab=d.v;saveUI();render()},
  pc(d){UI.pcourse=d.v;saveUI();render()},
- tc(d){UI.tcourse=d.v;saveUI();if(ORDER.includes(d.v))DB.update({['active/'+UI.cls]:d.v});else render()},
+ tt(d){UI.ttab=d.v;render()},
+ setact(d){DB.update({['active/'+UI.cls]:d.v});toast(C(d.v).name+' affiché sur la tablette '+UI.cls)},
  only(){UI.only=!UI.only;render()},
  print(){print()},
  map(d){UI.modal={t:'map',v:d.v};render()},
@@ -470,6 +475,7 @@ const A={
   for(let i=0;i<f.length;i+=2){let m=f.slice(i,i+2);if(f.length-i===3){m=f.slice(i,i+3);i++}o[`binomes/${cls}/${uid()+i}`]={n:n++,m}}
   UI.sel=[];DB.update(o)},
  resetb(){const cls=UI.cls;ask(`Supprimer les ${binomes(cls).length} binômes de la ${cls} (et les équipes de relais) ? Les résultats déjà faits sont conservés.`,()=>{UI.sel=[];DB.update({['binomes/'+cls]:null,['teams/'+cls]:null});toast('Binômes remis à zéro')})},
+ resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
  repl(){const bs=binomes(UI.cls),a=UI.sel.find(x=>bs.some(b=>b.m.includes(x))),f=UI.sel.find(x=>x!==a),B1=bs.find(x=>x.m.includes(a));
@@ -487,7 +493,7 @@ const A={
   if(!s.r.start){o[p+'/start']=t;o[p+'/m']=u.m;if(s.x)o[p+'/x']=s.x}
   if(c.type==='star'||c.type==='relay'){if(!s.next)return;o[p+'/out']={b:s.next,d:t,...(s.runner?{by:s.runner.id,lbl:s.runner.label}:{})}}
   DB.update(o)},
- startall(){ask('Lancer le départ de tous les binômes pas encore partis ?',()=>{const cls=UI.cls,cid=UI.tcourse||S.active?.[cls],t=now(),o={};
+ startall(d){ask('Lancer le départ de tous les binômes pas encore partis ?',()=>{const cls=UI.cls,cid=d.c,t=now(),o={};
   units(cid,cls).forEach(u=>{const s=state(cid,cls,u);if(s.status==='idle'){o[RP(cid,cls,u.id)+'/start']=t;o[RP(cid,cls,u.id)+'/m']=u.m}});DB.update(o)})},
  ret(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v),s=state(d.c,UI.cls,u);UI.modal={t:'kp',c:d.c,v:d.v,b:s.out.b,label:u.label,code:''};render()},
  k(d){const m=UI.modal;if(d.v==='del')m.code=m.code.slice(0,-1);else if(d.v==='ok'){if(!m.code)return;finishLeg(m,norm(m.code)===C(m.c).K[m.b]?.c,m.code);return}else if(m.code.length<4)m.code+=d.v;render()},
@@ -535,6 +541,7 @@ document.addEventListener('change',e=>{const el=e.target;
 
 /* chronos */
 function tick(){const t=now();
+ document.querySelectorAll('[data-exp]').forEach(e=>{if(t>+e.dataset.exp)e.remove()});
  document.querySelectorAll('[data-since]').forEach(e=>{const d=t-(+e.dataset.since);e.textContent=fmt(d);
   const al=+e.dataset.alert;if(al){const m=d/60000,c=e.closest('.card');if(c){c.classList.toggle('warn',m>=al&&m<2*al);c.classList.toggle('danger',m>=2*al)}}
   const lim=+e.dataset.lim;if(lim)e.classList.toggle('late',d>lim*60000)});
