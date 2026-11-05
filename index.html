@@ -329,8 +329,8 @@ function vSuivi(cls){
  const alerts=all.filter(s=>(s.out&&now()-s.out.d>g.alertRed*60000)||(s.r.start&&!s.r.finish&&s.late>0));
  let h=`${courseSeg(cls,'pcourse')}<p class="small mut">● = carte ouverte sur la tablette. Limite ${c.limit} min · pénalité ${c.penalty} pt / 30 s de retard. <button class="link" data-a="map" data-v="${cid}">Voir la carte</button></p>`;
  h+=clockBar(cls,cid,true);
- h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
- ${c.type==='relay'&&g.relayMode==='binomes'&&!all.some(s=>s.r.start)?`<button data-a="mkteams">${teams(cls).length?'Refaire':'Former'} les équipes de relais (2 binômes)</button>`:''}
+ h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span><button data-a="unact" data-v="${cid}">↩ Annuler : retirer de la tablette</button>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
+ ${c.type==='relay'&&g.relayMode==='binomes'?`<button data-a="goteams">👥 Composer les équipes de relais (${teams(cls).length})</button>`:''}
  ${(c.type==='vfm'||c.type==='score')&&all.some(s=>s.status==='idle')?`<button class="go" data-a="startall" data-c="${cid}">▶ Départ groupé</button>`:''}</div>`;
  if(alerts.length)h+=`<div class="banner">⚠ À surveiller : ${alerts.map(s=>s.u.label+' ('+names(s.u.m)+')').join(', ')}</div>`;
  if(!all.length)return h+`<p class="info">Aucun ${c.type==='relay'&&g.relayMode==='binomes'?'équipe de relais':'binôme'} pour la ${cls}. Créez-les dans l'onglet Binômes${c.type==='relay'?' puis sur la tablette (onglet Relais)':''}.</p>`;
@@ -338,6 +338,7 @@ function vSuivi(cls){
  all.forEach(s=>{h+=`<div class="card st-${s.status}" data-a="unit" data-v="${s.u.id}"><div class="row"><b>${s.u.label}</b><span class="names">${esc(names(s.r.m||s.u.m))}</span>${chrono(s)}</div><div class="small">${line(s)}</div></div>`});
  h+=`</div>`;
  if(done.length)h+=`<h2>Classement ${cls} – ${c.name}</h2>${rankTable(done,c)}`;
+ if(all.some(s=>s.r.start))h+=`<div class="flex" style="margin-top:18px"><button class="kobtn" data-a="resetcourse" data-v="${cid}">⟲ Remettre ce parcours à zéro (${cls})</button></div>`;
  return h;
 }
 function chrono(s){const r=s.r,c=s.c;if(!r.start)return '<span class="chrono mut">–</span>';
@@ -401,8 +402,18 @@ function vBinomes(cls){
  <div class="flex"><button class="${UI.absMode?'kobtn':''}" data-a="absmode">${UI.absMode?'✔ Mode absents actif':'Marquer des absents'}</button>${free.filter(s=>!absent(s.id)).length>=2?'<button data-a="autob">Compléter au hasard</button>':''}${bs.length?'<button class="kobtn" data-a="resetb">Remettre à zéro les binômes</button>':''}</div>
  ${acts?`<div class="flex" style="position:sticky;top:100px;z-index:3;background:var(--bg);padding:8px 0">${acts}</div>`:''}
  ${free.length?`<h2>Sans binôme (${free.filter(s=>!absent(s.id)).length})</h2><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${free.map(chip).join('')}</div>`:''}
- <h2>Binômes (${bs.length})</h2><div class="grid">${bs.map(b=>`<div class="card"><div class="row"><b>B${b.n}</b><button class="link" data-a="delb" data-v="${b.id}">défaire</button></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:6px">${b.m.map(id=>chip(STU[id])).join('')}</div></div>`).join('')}</div>`;
+ <h2>Binômes (${bs.length})</h2><div class="grid">${bs.map(b=>`<div class="card"><div class="row"><b>B${b.n}</b><button class="link" data-a="delb" data-v="${b.id}">défaire</button></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:6px">${b.m.map(id=>chip(STU[id])).join('')}</div></div>`).join('')}</div>${G().relayMode==='binomes'?vTeams(cls,bs):''}`;
 }
+function vTeams(cls,bs){
+ const ts=teams(cls),bm=Object.fromEntries(bs.map(b=>[b.id,b])),used=new Set(ts.flatMap(t=>t.b)),free=bs.filter(b=>!used.has(b.id)),sel=UI.tsel||[];
+ const bbtn=b=>`<button class="stu ${sel.includes(b.id)?'sel':''}" data-a="tpick" data-v="${b.id}"><span><b>B${b.n}</b> <span class="small mut">${esc(names(b.m))}</span></span></button>`;
+ return `<h2 id="teams">Équipes de relais (${ts.length})</h2>
+ <p class="info small">Pour le <b>Relais étoile</b> : touchez <b>2 binômes</b> puis « Créer l'équipe » (un binôme part, l'autre attend à la base). Touchez <b>1 seul binôme</b> pour le faire courir seul : il enchaîne alors toutes les balises.</p>
+ <div class="flex">${free.length?'<button data-a="mkteams">Compléter automatiquement (par 2)</button>':''}${ts.length?'<button class="kobtn" data-a="resetteams">Remettre à zéro les équipes</button>':''}</div>
+ ${sel.length?`<div class="flex" style="position:sticky;top:var(--clocktop,0px);z-index:3;background:var(--bg);padding:8px 0"><button class="go" data-a="mkteam">${sel.length===2?"Créer l'équipe (2 binômes)":'Binôme seul (équipe de 1)'}</button><button data-a="tunsel">Annuler</button></div>`:''}
+ ${free.length?`<h3 style="margin-top:12px">Binômes sans équipe (${free.length})</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${free.map(bbtn).join('')}</div>`:''}
+ <div class="grid" style="margin-top:12px">${ts.map(t=>`<div class="card" style="border-left-color:#1c7ed6"><div class="row"><b>É${t.n}</b><span class="pill ${t.b.length===1?'':'b'}">${t.b.length===1?'binôme seul':'2 binômes'}</span><button class="link" data-a="delteam" data-v="${t.id}">défaire</button></div>
+  ${t.b.map(id=>bm[id]?`<div class="small"><b>B${bm[id].n}</b> ${esc(names(bm[id].m))}</div>`:'').join('')}</div>`).join('')}</div>`}
 
 /* ---------- TABLETTE ---------- */
 function vTab(){
@@ -513,7 +524,7 @@ const A={
  at(d){UI.atab=d.v;saveUI();render()},
  pc(d){UI.pcourse=d.v;saveUI();render()},
  tt(d){UI.ttab=d.v;render()},
- setact(d){DB.update({['active/'+UI.cls]:d.v});toast(C(d.v).name+' affiché sur la tablette '+UI.cls)},
+ setact(d){const cur=S.active?.[UI.cls];DB.update({['active/'+UI.cls]:d.v,['activePrev/'+UI.cls]:cur&&cur!==d.v?cur:null});toast(C(d.v).name+' affiché sur la tablette '+UI.cls)},
  only(){UI.only=!UI.only;render()},
  print(){print()},
  map(d){UI.modal={t:'map',v:d.v};render()},
@@ -541,6 +552,8 @@ const A={
   if(!S.clock?.[cls]?.[cid]?.start)o[`clock/${cls}/${cid}/start`]=clockStart(cls,cid)||t;
   unitsAll(cid,cls).forEach(u=>{const r=R(cid,cls,u.id);if(r.start&&!r.finish){o[RP(cid,cls,u.id)+'/finish']=t;if(r.out)o[RP(cid,cls,u.id)+'/out']=null}});
   DB.update(o);toast('Fin sifflée 📣')})},
+ unact(d){const cls=UI.cls,prev=S.activePrev?.[cls];ask(prev?`Remettre « ${C(prev).name} » sur la tablette ${cls} ?`:`Retirer ce parcours de la tablette ${cls} ? (elle affichera « En attente »)`,()=>{DB.update({['active/'+cls]:prev||null,['activePrev/'+cls]:null});toast(prev?C(prev).name+' remis sur la tablette':'Tablette en attente')})},
+ resetcourse(d){const cls=UI.cls,c=C(d.v);ask(`Remettre « ${c.name} » à zéro pour la ${cls} ? Tous les chronos, balises et cartons de ce parcours seront effacés. Les binômes, équipes et notes de comportement sont conservés.`,()=>DB.update({[`runs/${d.v}/${cls}`]:null,[`clock/${cls}/${d.v}`]:null}))},
  resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
@@ -551,9 +564,15 @@ const A={
  rmfrom(){const a=UI.sel[0],B1=binomes(UI.cls).find(x=>x.m.includes(a));UI.sel=[];
   if(B1.m.length<=1)return DB.update({[`binomes/${UI.cls}/${B1.id}`]:null});DB.update({[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.filter(x=>x!==a)})},
  delb(d){ask('Défaire ce binôme ?',()=>DB.update({[`binomes/${UI.cls}/${d.v}`]:null}))},
- mkteams(){const cls=UI.cls,bs=binomes(cls),o={['teams/'+cls]:null};const ts={};
-  for(let i=0,n=1;i<bs.length;i+=2,n++){let b=bs.slice(i,i+2).map(x=>x.id);if(bs.length-i===3){b=bs.slice(i,i+3).map(x=>x.id);i++}ts['t'+n]={n,b}}
-  o['teams/'+cls]=ts;DB.update(o);toast(Object.keys(ts).length+' équipes formées')},
+ mkteams(){const cls=UI.cls,used=new Set(teams(cls).flatMap(t=>t.b));const free=binomes(cls).filter(b=>!used.has(b.id)).map(b=>b.id);
+  if(!free.length)return toast('Tous les binômes sont déjà dans une équipe');const o={};let n=nextTN(cls);
+  for(let i=0;i<free.length;i+=2)o[`teams/${cls}/${uid()+i}`]={n:n++,b:free.slice(i,i+2)};DB.update(o);UI.tsel=[]},
+ goteams(){UI.tab='bin';saveUI();render();setTimeout(()=>document.getElementById('teams')?.scrollIntoView({behavior:'smooth'}),50)},
+ tpick(d){UI.tsel=UI.tsel||[];UI.tsel=UI.tsel.includes(d.v)?UI.tsel.filter(x=>x!==d.v):[...UI.tsel,d.v].slice(-2);render()},
+ mkteam(){const cls=UI.cls;DB.update({[`teams/${cls}/${uid()}`]:{n:nextTN(cls),b:UI.tsel}});UI.tsel=[]},
+ tunsel(){UI.tsel=[];render()},
+ delteam(d){ask("Défaire cette équipe de relais ? (les binômes restent)",()=>DB.update({[`teams/${UI.cls}/${d.v}`]:null}))},
+ resetteams(){ask(`Supprimer toutes les équipes de relais de la ${UI.cls} ?`,()=>{UI.tsel=[];DB.update({['teams/'+UI.cls]:null})})},
  /* courses */
  dep(d){const cls=UI.cls,c=C(d.c),u=unitsAll(d.c,cls).find(x=>x.id===d.v),s=state(d.c,cls,u),p=RP(d.c,cls,d.v),t=now(),o={};
   if(!s.r.start){o[p+'/start']=t;o[p+'/m']=u.m;if(s.x)o[p+'/x']=s.x}
@@ -588,6 +607,7 @@ const A={
  wipe(){if($('#wipe').value!=='EFFACER')return toast('Tapez EFFACER');DB.update({binomes:null,teams:null,runs:null,behav:null,forms:null,absent:null,active:null});toast('Données effacées')},
 };
 function confirmSolo(){toast('Choisissez au moins 2 élèves');return false}
+function nextTN(cls){return Math.max(0,...teams(cls).map(t=>t.n))+1}
 function nextN(cls){return Math.max(0,...binomes(cls).map(b=>b.n))+1}
 function mkBinome(cls,m){DB.update({[`binomes/${cls}/${uid()}`]:{n:nextN(cls),m}})}
 function finishLeg(m,ok,code){const cls=UI.cls,p=RP(m.c,cls,m.v),r=R(m.c,cls,m.v),t=now();if(!r.out)return;
