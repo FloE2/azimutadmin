@@ -109,7 +109,7 @@ const COURSES = {
 };
 const ORDER = ['etoile','relais','vfm','score'];
 const SECU = "<h3>👥 La règle d'or : le binôme indissociable</h3>\n<p>Vous restez avec votre partenaire du début à la fin. Interdiction absolue de vous séparer, même pour aller chercher une balise « plus vite » ou aller aux toilettes. Vous partez ensemble, vous cherchez ensemble, vous rentrez ensemble.</p>\n<h3>🛑 Les limites du terrain</h3>\n<ul><li><b>Les barrières du parc :</b> ne franchissez jamais les grilles ou les sorties du parc. Tout le jeu se déroule à l'intérieur.</li>\n<li><b>Les zones d'eau :</b> interdiction d'approcher à moins de 5 mètres du Grand Canal, des bassins (Octogone, Aurore) et des cascades. On ne court pas sur les pontons.</li>\n<li><b>Les zones interdites :</b> espaces clos, chantiers, château (sauf consigne), parterres de fleurs interdits au public.</li></ul>\n<h3>🏃 Comportement et sécurité</h3>\n<ul><li><b>Attention aux autres :</b> le parc est ouvert au public. Ne bousculez pas les promeneurs, les jeunes enfants ou les personnes âgées. Attention aux vélos sur les grandes allées.</li>\n<li><b>La montre :</b> surveillez l'heure. L'heure de retour au point de rassemblement n'est pas négociable. Tout retard entraîne une pénalité ou l'arrêt de la course.</li>\n<li><b>Respect de la nature :</b> ne grimpez pas aux arbres, ne traversez pas les buissons denses.</li></ul>\n<h3>🚨 Si ton partenaire se blesse</h3>\n<ol><li><b>Sécurise :</b> installe-le assis ou allongé, à l'abri du passage.</li>\n<li><b>Ne le laisse jamais seul.</b></li>\n<li><b>Alerte :</b> appelle le numéro du professeur écrit sur ta carte, OU demande à un autre binôme ou à un adulte du parc d'aller prévenir les professeurs au point de rassemblement, en donnant votre position exacte (ex. « Près du bassin de l'Octogone », « balise n°12 »).</li></ol>\n<h3>🧭 Si vous êtes perdus</h3>\n<ol><li><b>Arrêtez de courir au hasard.</b> Repérez un point haut (le Château, le Grand Canal).</li>\n<li><b>Rejoignez une grande allée</b> en marchant calmement : vous y croiserez un professeur, un adulte ou la sécurité du parc.</li>\n<li><b>Heure limite dépassée :</b> restez visibles sur une grande allée et appelez le professeur. Ne bougez plus.</li></ol>\n<h3>🎒 Dans le sac de chaque binôme</h3>\n<ul><li>1 montre ou 1 téléphone chargé</li><li>La carte avec le numéro du professeur écrit en rouge</li><li>Une gourde et un en-cas sucré</li><li>Un vêtement de pluie / coupe-vent</li></ul>\n";
-const GDEF = {name4A:'Florian',name4B:'Emeric',phone4A:'',phone4B:'',nameU:'Ulysse',phoneU:'',rally:'',alert:8,pin:'1234',base:15,relayMode:'binomes'};
+const GDEF = {name4A:'Florian',name4B:'Emeric',phone4A:'',phone4B:'',nameU:'Ulysse',phoneU:'',rally:'',alert:8,alertRed:12,pin:'1234',base:15,relayMode:'binomes'};
 const BEH = [
  ['p1','Respecte les consignes',1],['p2','Reste avec son binôme',1],['p3','Entraide, fair-play',1],['p4','Très investi(e)',1],
  ['p5','Calme, respecte le public',1],['p6','Ponctuel(le) au retour',1],['p7','Soin du matériel',1],['p8','Leader positif',2],
@@ -282,7 +282,7 @@ function courseSeg(cls,which){const act=S.active?.[cls];const cur=curCourse(cls,
 function vSuivi(cls){
  const cid=curCourse(cls,'pcourse'),c=C(cid),{all,done}=ranking(cid,cls),g=G();
  const cnt=k=>all.filter(s=>s.status===k).length;
- const alerts=all.filter(s=>(s.out&&now()-s.out.d>2*g.alert*60000)||(s.r.start&&!s.r.finish&&s.late>0));
+ const alerts=all.filter(s=>(s.out&&now()-s.out.d>g.alertRed*60000)||(s.r.start&&!s.r.finish&&s.late>0));
  let h=`${courseSeg(cls,'pcourse')}<p class="small mut">● = carte ouverte sur la tablette. Limite ${c.limit} min · pénalité ${c.penalty} pt / 30 s de retard. <button class="link" data-a="map" data-v="${cid}">Voir la carte</button></p>`;
  h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
  ${c.type==='relay'&&g.relayMode==='binomes'&&!all.some(s=>s.r.start)?`<button data-a="mkteams">${teams(cls).length?'Refaire':'Former'} les équipes de relais (2 binômes)</button>`:''}
@@ -301,7 +301,7 @@ function chrono(s){const r=s.r,c=s.c;if(!r.start)return '<span class="chrono mut
 function line(s){const c=s.c,r=s.r;let t='';
  const sc=(c.type==='star'||c.type==='relay')?`<span class="pill ok">✔ ${s.ok}/${c.n}</span> ${s.err?`<span class="pill ko">✘ ${s.err}</span>`:''}`:'';
  if(s.status==='idle')t='Pas encore parti'+(s.x?` · 1re balise : ${s.x}`:'');
- else if(s.status==='out')t=(c.type==='star'||c.type==='relay')?`→ balise <b>${s.out.b}</b>${s.out.lbl?' ('+esc(s.out.lbl)+')':''} depuis <b data-since="${s.out.d}" data-alert="${G().alert}"></b>`:`En course · <span data-left="${r.start}" data-lim="${c.limit}" data-pen="${c.penalty}"></span>`;
+ else if(s.status==='out')t=(c.type==='star'||c.type==='relay')?`→ balise <b>${s.out.b}</b>${s.out.lbl?' ('+esc(s.out.lbl)+')':''} depuis <b data-since="${s.out.d}" data-alert="${G().alert}" data-red="${G().alertRed}"></b>`:`En course · <span data-left="${r.start}" data-lim="${c.limit}" data-pen="${c.penalty}"></span>`;
  else if(s.status==='base')t=`À la base · prochaine : ${s.next}${s.retry?' (2e essai)':''} · <span data-left="${r.start}" data-lim="${c.limit}" data-pen="${c.penalty}"></span>`;
  else if(s.status==='arrived')t='Arrivé · carton à saisir';
  else t=`Terminé · <b>${s.final} pt${s.final>1?'s':''}</b>${s.pen?` (−${s.pen} retard)`:''} · ${s.rank?s.rank+'e':''}`;
@@ -366,7 +366,7 @@ function vRun(cls,cid){
 function tabCard(s,cid){const c=s.c,id=s.u.id,d=`data-c="${cid}" data-v="${id}"`;
  if(c.type==='star'||c.type==='relay'){
   if(s.status==='done')return `<p>Terminé · <b>${s.final} pts</b> ${s.pen?`(−${s.pen} retard)`:''} · ✔${s.ok} ✘${s.err} ${s.rank?'· <b>'+s.rank+'e</b>':''}</p>`;
-  if(s.status==='out')return `<p>→ balise <b style="font-size:1.3rem">${s.out.b}</b>${s.out.lbl?' · '+esc(s.out.lbl):''} · depuis <span data-since="${s.out.d}" data-alert="${G().alert}"></span></p><button class="big back" data-a="ret" ${d}>⏎ Retour : saisir le code</button>${now()-s.out.d<30000?`<div class="row" data-exp="${s.out.d+30000}"><button class="link" data-a="undo" ${d}>annuler ce départ (erreur)</button></div>`:''}`;
+  if(s.status==='out')return `<p>→ balise <b style="font-size:1.3rem">${s.out.b}</b>${s.out.lbl?' · '+esc(s.out.lbl):''} · depuis <span data-since="${s.out.d}" data-alert="${G().alert}" data-red="${G().alertRed}"></span></p><button class="big back" data-a="ret" ${d}>⏎ Retour : saisir le code</button>${now()-s.out.d<30000?`<div class="row" data-exp="${s.out.d+30000}"><button class="link" data-a="undo" ${d}>annuler ce départ (erreur)</button></div>`:''}`;
   const last=s.last?`<p class="small">${s.last.ok?'✔':'✘'} balise ${s.last.b} ${s.last.ok?'juste':'fausse'} · ✔${s.ok} ✘${s.err}</p>`:'';
   const run=s.runner?`<p class="small">Relayeur : <b>${esc(s.runner.label)}</b> ${esc(s.runner.sub||'')}</p>`:'';
   return `${last}${run}<button class="big go" data-a="dep" ${d}>▶ Départ → balise ${s.next}${s.retry?' (2e essai)':''}</button>
@@ -391,7 +391,7 @@ function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on'
  return h}
 function vReg(){const g=G();const f=(k,l,t='text')=>`<label>${l}<input type="${t}" data-s="settings/g/${k}" value="${esc(g[k])}"></label>`;
  let h=`<div class="form"><h2>Général</h2>${f('rally','Point de rassemblement')}${f('name4A','Prof 4A')}${f('phone4A','Téléphone prof 4A','tel')}${f('name4B','Prof 4B')}${f('phone4B','Téléphone prof 4B','tel')}${f('nameU','Prof 4A + 4B')}${f('phoneU','Téléphone prof 4A + 4B','tel')}
- ${f('alert','Alerte si un binôme est parti vers une balise depuis plus de (min) — rouge au double','number')}${f('base','Note de comportement de départ (/20)','number')}${f('pin','Code pour quitter le mode tablette')}
+ ${f('alert','Alerte ORANGE : un binôme cherche une balise depuis plus de (min)','number')}${f('alertRed','Alerte ROUGE + bandeau « À surveiller » : depuis plus de (min)','number')}${f('base','Note de comportement de départ (/20)','number')}${f('pin','Code pour quitter le mode tablette')}
  <label>Relais étoile : qui se relaie ?<select data-s="settings/g/relayMode"><option value="binomes" ${g.relayMode==='binomes'?'selected':''}>Deux binômes se relaient (respecte « binôme indissociable »)</option><option value="eleves" ${g.relayMode==='eleves'?'selected':''}>Les 2 élèves du binôme se relaient (comme le livre)</option></select></label>`;
  ORDER.forEach(id=>{const c=C(id),p=`settings/courses/${id}/`;
   h+=`<h2>${c.name}</h2><div class="flex"><label>Temps limite (min)<input type="number" data-s="${p}limit" value="${c.limit}"></label><label>Points retirés / 30 s de retard<input type="number" data-s="${p}penalty" value="${c.penalty}"></label>
@@ -543,7 +543,7 @@ document.addEventListener('change',e=>{const el=e.target;
 function tick(){const t=now();
  document.querySelectorAll('[data-exp]').forEach(e=>{if(t>+e.dataset.exp)e.remove()});
  document.querySelectorAll('[data-since]').forEach(e=>{const d=t-(+e.dataset.since);e.textContent=fmt(d);
-  const al=+e.dataset.alert;if(al){const m=d/60000,c=e.closest('.card');if(c){c.classList.toggle('warn',m>=al&&m<2*al);c.classList.toggle('danger',m>=2*al)}}
+  const al=+e.dataset.alert;if(al){const rd=+e.dataset.red||2*al,m=d/60000,c=e.closest('.card');if(c){c.classList.toggle('warn',m>=al&&m<rd);c.classList.toggle('danger',m>=rd)}}
   const lim=+e.dataset.lim;if(lim)e.classList.toggle('late',d>lim*60000)});
  document.querySelectorAll('[data-left]').forEach(e=>{const rest=(+e.dataset.left)+(+e.dataset.lim)*60000-t;
   if(rest>=0){e.textContent='reste '+fmt(rest);e.classList.remove('late')}else{const tr=Math.ceil(-rest/30000);e.textContent='RETARD +'+fmt(-rest)+' (−'+tr*(+e.dataset.pen)+' pt)';e.classList.add('late');e.closest('.card')?.classList.add('over')}});
