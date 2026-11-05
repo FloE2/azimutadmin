@@ -321,7 +321,7 @@ function vBinomes(cls){
   acts+=`<button data-a="unsel">Annuler</button>`;}
  const chip=s=>`<button class="stu ${sel.includes(s.id)?'sel':''} ${absent(s.id)?'abs':''}" data-a="pick" data-v="${s.id}"><span>${esc(s.short)}</span><span class="small" style="color:var(--ko)">${ff(s.id)}</span></button>`;
  return `<p class="info small">Les binômes sont <b>les mêmes pour les 4 parcours</b> de la journée. En cas de mésentente : touchez 2 élèves de binômes différents puis « Échanger », ou un élève d'un binôme + un élève libre pour le remplacer. Les résultats déjà faits restent attribués aux élèves qui ont couru. ⚠sortie = feuille de sortie manquante · 📷 = pas de droit à l'image.</p>
- <div class="flex"><button class="${UI.absMode?'kobtn':''}" data-a="absmode">${UI.absMode?'✔ Mode absents actif':'Marquer des absents'}</button>${free.filter(s=>!absent(s.id)).length>=2?'<button data-a="autob">Compléter au hasard</button>':''}</div>
+ <div class="flex"><button class="${UI.absMode?'kobtn':''}" data-a="absmode">${UI.absMode?'✔ Mode absents actif':'Marquer des absents'}</button>${free.filter(s=>!absent(s.id)).length>=2?'<button data-a="autob">Compléter au hasard</button>':''}${bs.length?'<button class="kobtn" data-a="resetb">Remettre à zéro les binômes</button>':''}</div>
  ${acts?`<div class="flex" style="position:sticky;top:100px;z-index:3;background:var(--bg);padding:8px 0">${acts}</div>`:''}
  ${free.length?`<h2>Sans binôme (${free.filter(s=>!absent(s.id)).length})</h2><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${free.map(chip).join('')}</div>`:''}
  <h2>Binômes (${bs.length})</h2><div class="grid">${bs.map(b=>`<div class="card"><div class="row"><b>B${b.n}</b><button class="link" data-a="delb" data-v="${b.id}">défaire</button></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:6px">${b.m.map(id=>chip(STU[id])).join('')}</div></div>`).join('')}</div>`;
@@ -453,6 +453,7 @@ const A={
   if(f.length<2)return toast('Pas assez d\'élèves libres');const o={};let n=nextN(cls);
   for(let i=0;i<f.length;i+=2){let m=f.slice(i,i+2);if(f.length-i===3){m=f.slice(i,i+3);i++}o[`binomes/${cls}/${uid()+i}`]={n:n++,m}}
   UI.sel=[];DB.update(o)},
+ resetb(){const cls=UI.cls;ask(`Supprimer les ${binomes(cls).length} binômes de la ${cls} (et les équipes de relais) ? Les résultats déjà faits sont conservés.`,()=>{UI.sel=[];DB.update({['binomes/'+cls]:null,['teams/'+cls]:null});toast('Binômes remis à zéro')})},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
  repl(){const bs=binomes(UI.cls),a=UI.sel.find(x=>bs.some(b=>b.m.includes(x))),f=UI.sel.find(x=>x!==a),B1=bs.find(x=>x.m.includes(a));
