@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sortie Parc de Sceaux</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#6b6b70;--line:#ddd;--ok:#e6f4ea;--okt:#1e7a3a;--no:#fdecea}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1b1d;--fg:#eee;--mut:#a0a0a6;--line:#3a3a3e;--ok:#1f3527;--okt:#7fd39a;--no:#3a2322}}
+body{background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif;margin:0;padding:16px;max-width:900px;margin:auto}
+h1{font-size:1.3rem;margin:0 0 4px}p.sub{color:var(--mut);margin:0 0 16px}
+.bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+button{font:inherit;padding:6px 12px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:6px;cursor:pointer}
+button.on{background:var(--fg);color:var(--bg)}
+h2{font-size:1.1rem;margin:24px 0 6px}.cnt{color:var(--mut);font-weight:normal;font-size:.9rem}
+table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+th{font-size:.85rem;color:var(--mut)}td.c,th.c{text-align:center;width:110px}
+tr.done{background:var(--ok)}tr.done td:first-child{color:var(--okt)}
+input[type=checkbox]{width:20px;height:20px;cursor:pointer}
+body.only tr.done{display:none}
+@media print{.bar{display:none}body{padding:0}tr.done{background:none}}
+</style></head><body>
+<h1>Sortie AZIMUT – Parc de Sceaux</h1>
+<p class="sub">Course d'orientation · lundi 9 novembre · 4A et 4B</p>
+<div class="bar">
+<button id="f">Afficher seulement les dossiers incomplets</button>
+<button onclick="window.print()">Imprimer</button>
+</div>
+<div id="app"></div>
+<script>
+const D={"4A": [["ALLEAUME-NDJOCK", "Maïlys"], ["BATTESTINI-AVARGUES", "Arsène"], ["BENAÏSSA", "Kaïss"], ["BINET", "Guillaume"], ["BRIMONT", "Ferdinand"], ["CARENINI", "Maël"], ["CHENU", "Hermine"], ["CHOUK", "Rayan"], ["DAVIET - GOMES", "Haley"], ["DEBANO", "Alexandre"], ["DEPOUX", "Anaïs"], ["DESPRAT DI BENEDETTO", "Anna"], ["DOMENEC", "Chloé"], ["DUVEAU", "Constance"], ["EL AWAR", "Lara"], ["ELALAM", "Haroun"], ["FAIVRE", "Baptiste"], ["GANDIL", "Manon"], ["LEMAITRE", "Romane"], ["LENNUYEUX", "Rachel"], ["MCHANGAMA", "An-Icha"], ["NASSEREDDINE", "Léa"], ["PANTIS", "Darius"], ["REBELO - ESPANHOL", "Bianca"], ["THERINCA", "Lya"], ["VIEILLEFOND", "Blanche"]], "4B": [["BEAUJOIN LE QUELLEC", "Eve"], ["BEUTIER", "Manon"], ["BONCORPS", "Baptiste"], ["BRUNEAU", "Livia"], ["BURY", "Faustine"], ["CHAMARD-SABLIER", "Augustin"], ["CHAPPEY", "Adam"], ["CHOLLIER CASTELNAU", "Romain"], ["CHRETIEN", "Yélina"], ["CLOUET", "Julien"], ["DA SILVA", "Anaïs"], ["DEBANO", "Mathilde"], ["DHARMARATNA", "Omisha"], ["FABRE-GARRUS", "Aurèle"], ["FINANCE", "Manon"], ["HAYE", "Raphael"], ["KADOCHE", "Stella"], ["KINGUANGU", "Julie"], ["LABIAD", "Haron"], ["MARKUS", "Anaïs"], ["MAYER", "Zoé"], ["MORENO SORLIN", "Rafaël"], ["NETO VIANA", "Denitsa"], ["OLEIRO", "Valentin"], ["SAIDI", "Kais"], ["SCHWAB", "Gabrielle"], ["VIRIOT GONTIER", "Marilou"]]};
+const K='sceaux-9nov';let S={};try{S=JSON.parse(localStorage.getItem(K))||{}}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+function render(){let h='';for(const c in D){
+ const n=D[c].length,s=D[c].filter((_,i)=>S[c+i+'s']).length,im=D[c].filter((_,i)=>S[c+i+'i']).length;
+ h+=`<h2>${c} <span class="cnt">— sortie ${s}/${n} · droit à l'image ${im}/${n}</span></h2><table><tr><th>Élève</th><th class="c">Feuille sortie</th><th class="c">Droit à l'image</th></tr>`;
+ D[c].forEach(([nom,pre],i)=>{const a=S[c+i+'s'],b=S[c+i+'i'];
+  h+=`<tr class="${a&&b?'done':''}"><td>${nom} ${pre}</td><td class="c"><input type="checkbox" data-k="${c+i}s" ${a?'checked':''}></td><td class="c"><input type="checkbox" data-k="${c+i}i" ${b?'checked':''}></td></tr>`});
+ h+='</table>'}document.getElementById('app').innerHTML=h}
+document.addEventListener('change',e=>{const k=e.target.dataset.k;if(k){S[k]=e.target.checked;save();render()}});
+document.getElementById('f').onclick=e=>{document.body.classList.toggle('only');e.target.classList.toggle('on')};
+render();
+</script></body></html>
