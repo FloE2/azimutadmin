@@ -174,6 +174,8 @@ function units(cid,cls){
   return bs.map(b=>({id:b.id,label:'B'+b.n,m:b.m,runners:b.m.map(s=>({id:s,label:STU[s].short,sub:''}))}))}
  return bs.map(b=>({id:b.id,label:'B'+b.n,m:b.m}));
 }
+function unitsAll(cid,cls){const us=units(cid,cls);const ids=new Set(us.map(u=>u.id));
+ Object.entries(S.runs?.[cid]?.[cls]||{}).forEach(([id,r])=>{if(!ids.has(id)&&r.start)us.push({id,label:'ex-binôme',m:r.m||[],old:true})});return us}
 
 /* ---------- courses ---------- */
 const R=(cid,cls,id)=>S.runs?.[cid]?.[cls]?.[id]||{};
@@ -205,7 +207,7 @@ function state(cid,cls,u){
  st.final=Math.max(0,st.pts-st.pen);return st;
 }
 function ranking(cid,cls){
- const all=units(cid,cls).map(u=>state(cid,cls,u));
+ const all=unitsAll(cid,cls).map(u=>state(cid,cls,u));
  const done=all.filter(s=>s.status==='done').sort((a,b)=>b.final-a.final||a.elapsed-b.elapsed);
  done.forEach((s,i)=>s.rank=i+1);return {all,done};
 }
@@ -269,7 +271,7 @@ function vSuivi(cls){
  if(alerts.length)h+=`<div class="banner">⚠ À surveiller : ${alerts.map(s=>s.u.label+' ('+names(s.u.m)+')').join(', ')}</div>`;
  if(!all.length)return h+`<p class="info">Aucun ${c.type==='relay'&&g.relayMode==='binomes'?'équipe de relais':'binôme'} pour la ${cls}. Créez-les dans l'onglet Binômes${c.type==='relay'?' puis sur la tablette (onglet Relais)':''}.</p>`;
  h+=`<p><span class="pill b">${cnt('out')} en course</span> <span class="pill">${cnt('base')+cnt('arrived')} à la base</span> <span class="pill ok">${cnt('done')} terminés</span> <span class="pill">${cnt('idle')} pas partis</span></p><div class="grid">`;
- all.forEach(s=>{h+=`<div class="card st-${s.status}" data-a="unit" data-v="${s.u.id}"><div class="row"><b>${s.u.label}</b><span class="names">${esc(names(s.u.m))}</span>${chrono(s)}</div><div class="small">${line(s)}</div></div>`});
+ all.forEach(s=>{h+=`<div class="card st-${s.status}" data-a="unit" data-v="${s.u.id}"><div class="row"><b>${s.u.label}</b><span class="names">${esc(names(s.r.m||s.u.m))}</span>${chrono(s)}</div><div class="small">${line(s)}</div></div>`});
  h+=`</div>`;
  if(done.length)h+=`<h2>Classement ${cls} – ${c.name}</h2>${rankTable(done,c)}`;
  return h;
@@ -307,16 +309,22 @@ function vSecu(cls){const g=G();
 
 /* ---------- binômes ---------- */
 function vBinomes(cls){
- const bs=binomes(cls),inB=new Set(bs.flatMap(b=>b.m));
- const free=clsStu(cls).filter(s=>!inB.has(s.id));
+ const bs=binomes(cls),where={};bs.forEach(b=>b.m.forEach(m=>where[m]=b));
+ const free=clsStu(cls).filter(s=>!where[s.id]);
  const ff=sid=>{const f=S.forms?.[sid]||{};return (!f.s?' ⚠sortie':'')+(!f.i?' 📷':'')};
- let h=`<p class="small mut">Touchez 2 élèves (ou 3) puis « Créer ». ⚠sortie = feuille de sortie manquante · 📷 = pas de droit à l'image.</p>
- <div class="flex"><button class="${UI.absMode?'kobtn':''}" data-a="absmode">${UI.absMode?'✔ Mode absents actif':'Marquer des absents'}</button>
- <button data-a="autob">Compléter au hasard</button>${UI.sel.length?`<button class="go" data-a="mkb">Créer le binôme (${UI.sel.length})</button><button data-a="unsel">Annuler</button>`:''}</div>
- <h2>Sans binôme (${free.filter(s=>!absent(s.id)).length})</h2><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
- ${free.map(s=>`<button class="stu ${UI.sel.includes(s.id)?'sel':''} ${absent(s.id)?'abs':''}" data-a="pick" data-v="${s.id}"><span>${esc(s.short)}</span><span class="small" style="color:var(--ko)">${ff(s.id)}</span></button>`).join('')}</div>
- <h2>Binômes (${bs.length})</h2><div class="grid">${bs.map(b=>`<div class="card"><div class="row"><b>B${b.n}</b><span class="names">${esc(names(b.m))}</span><button class="link" data-a="delb" data-v="${b.id}">défaire</button></div></div>`).join('')}</div>`;
- return h;
+ const sel=UI.sel,inb=sel.filter(x=>where[x]),fr=sel.filter(x=>!where[x]);let acts='';
+ if(sel.length){
+  if(!inb.length&&fr.length>=2)acts+=`<button class="go" data-a="mkb">Créer le binôme (${fr.length})</button>`;
+  if(inb.length===2&&!fr.length&&where[inb[0]]!==where[inb[1]])acts+=`<button class="go" data-a="swap">⇄ Échanger ${esc(STU[inb[0]].short)} et ${esc(STU[inb[1]].short)}</button>`;
+  if(inb.length===1&&fr.length===1)acts+=`<button class="go" data-a="repl">Remplacer ${esc(STU[inb[0]].short)} par ${esc(STU[fr[0]].short)}</button><button data-a="addto">Ajouter ${esc(STU[fr[0]].short)} à B${where[inb[0]].n} (trinôme)</button>`;
+  if(inb.length===1&&!fr.length)acts+=`<button data-a="rmfrom">Retirer ${esc(STU[inb[0]].short)} de B${where[inb[0]].n}</button>`;
+  acts+=`<button data-a="unsel">Annuler</button>`;}
+ const chip=s=>`<button class="stu ${sel.includes(s.id)?'sel':''} ${absent(s.id)?'abs':''}" data-a="pick" data-v="${s.id}"><span>${esc(s.short)}</span><span class="small" style="color:var(--ko)">${ff(s.id)}</span></button>`;
+ return `<p class="info small">Les binômes sont <b>les mêmes pour les 4 parcours</b> de la journée. En cas de mésentente : touchez 2 élèves de binômes différents puis « Échanger », ou un élève d'un binôme + un élève libre pour le remplacer. Les résultats déjà faits restent attribués aux élèves qui ont couru. ⚠sortie = feuille de sortie manquante · 📷 = pas de droit à l'image.</p>
+ <div class="flex"><button class="${UI.absMode?'kobtn':''}" data-a="absmode">${UI.absMode?'✔ Mode absents actif':'Marquer des absents'}</button>${free.filter(s=>!absent(s.id)).length>=2?'<button data-a="autob">Compléter au hasard</button>':''}</div>
+ ${acts?`<div class="flex" style="position:sticky;top:100px;z-index:3;background:var(--bg);padding:8px 0">${acts}</div>`:''}
+ ${free.length?`<h2>Sans binôme (${free.filter(s=>!absent(s.id)).length})</h2><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${free.map(chip).join('')}</div>`:''}
+ <h2>Binômes (${bs.length})</h2><div class="grid">${bs.map(b=>`<div class="card"><div class="row"><b>B${b.n}</b><button class="link" data-a="delb" data-v="${b.id}">défaire</button></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:6px">${b.m.map(id=>chip(STU[id])).join('')}</div></div>`).join('')}</div>`;
 }
 
 /* ---------- TABLETTE ---------- */
@@ -336,7 +344,7 @@ function vRun(cls,cid){
  if(!all.length)return h+`<p class="info">Rien à afficher : créez d'abord les binômes (onglet Binômes).</p>`;
  if((c.type==='vfm'||c.type==='score')&&all.some(s=>s.status==='idle'))h+=`<button class="big go" data-a="startall">▶ Départ groupé de tous les binômes</button>`;
  h+=`<div class="grid" style="margin-top:10px">`;
- all.forEach(s=>{h+=`<div class="card st-${s.status}"><div class="row"><b style="font-size:1.2rem">${s.u.label}</b><span class="names">${esc(names(s.u.m))}</span>${chrono(s)}</div>${tabCard(s,cid)}</div>`});
+ all.forEach(s=>{h+=`<div class="card st-${s.status}"><div class="row"><b style="font-size:1.2rem">${s.u.label}</b><span class="names">${esc(names(s.r.m||s.u.m))}</span>${chrono(s)}</div>${tabCard(s,cid)}</div>`});
  h+=`</div>`;
  if(done.length)h+=`<h2>Classement</h2>${rankTable(done,c)}`;
  return h;
@@ -405,7 +413,7 @@ function vModal(){const m=UI.modal;
   <div class="chips" style="margin-top:8px">${BEH.filter(b=>b[2]<0).map(b=>`<button class="chip n" data-a="addb" data-v="${b[0]}">${b[2]} ${esc(b[1])}</button>`).join('')}</div>
   <h3 style="margin-top:14px">Historique</h3>${ev.length?ev.map(e=>`<div class="row" style="margin:6px 0"><span class="small" style="min-width:150px"><span class="mut">${hm(e.t)}</span> ${esc(BEHM[e.k]?.t)} (${BEHM[e.k]?.v>0?'+':''}${BEHM[e.k]?.v})</span><input style="flex:1" placeholder="préciser… (ex : hurle dans le parc)" data-ev="behav/${m.sid}/${e.k2}/txt" value="${esc(e.txt||'')}"><button class="link" data-a="delbeh" data-v="${e.k2}">✕</button></div>`).join(''):'<p class="mut small">Rien pour l\'instant.</p>'}
   <button class="big" data-a="close">Fermer</button>`}
- if(m.t==='unit'){const cid=m.c,u=units(cid,UI.cls).find(x=>x.id===m.v);if(!u)return `<button class="big" data-a="close">Fermer</button>`;const s=state(cid,UI.cls,u);
+ if(m.t==='unit'){const cid=m.c,u=unitsAll(cid,UI.cls).find(x=>x.id===m.v);if(!u)return `<button class="big" data-a="close">Fermer</button>`;const s=state(cid,UI.cls,u);
   return `<h3>${u.label} · ${C(cid).name}</h3>
   <div class="flex">${(s.r.m||u.m).map(sid=>`<button data-a="beh" data-v="${sid}">${esc(STU[sid].short)} <span class="note ${ncls(behNote(sid))}">${behNote(sid)}</span></button>`).join('')}</div>
   <p>${line(s)}</p>${s.legs?`<div class="tw"><table><tr><th>Balise</th><th>Parti à</th><th>Durée</th><th>Code</th><th></th></tr>${s.legs.map(l=>`<tr><td>${l.b}</td><td>${l.d?hm(l.d):''}</td><td>${l.r?fmt(l.r-l.d):''}</td><td>${esc(l.code||'')}</td><td>${l.skip?'passée':l.ok?'✔':'✘'}${l.lbl?' '+esc(l.lbl):''}</td></tr>`).join('')}</table></div>`:''}
@@ -438,37 +446,45 @@ const A={
  absmode(){UI.absMode=!UI.absMode;render()},
  pick(d){if(UI.absMode){DB.update({['absent/'+d.v]:absent(d.v)?null:true});return}
   if(absent(d.v))return toast('Élève marqué absent');
-  UI.sel=UI.sel.includes(d.v)?UI.sel.filter(x=>x!==d.v):[...UI.sel,d.v].slice(-3);render()},
+  UI.sel=UI.sel.includes(d.v)?UI.sel.filter(x=>x!==d.v):[...UI.sel,d.v].slice(-4);render()},
  unsel(){UI.sel=[];render()},
- mkb(){if(UI.sel.length<2&&!confirmSolo())return;mkBinome(UI.cls,UI.sel);UI.sel=[];},
+ mkb(){mkBinome(UI.cls,UI.sel);UI.sel=[];},
  autob(){const cls=UI.cls,inB=new Set(binomes(cls).flatMap(b=>b.m));const f=clsStu(cls).filter(s=>!inB.has(s.id)&&!absent(s.id)).map(s=>s.id).sort(()=>Math.random()-.5);
   if(f.length<2)return toast('Pas assez d\'élèves libres');const o={};let n=nextN(cls);
   for(let i=0;i<f.length;i+=2){let m=f.slice(i,i+2);if(f.length-i===3){m=f.slice(i,i+3);i++}o[`binomes/${cls}/${uid()+i}`]={n:n++,m}}
   UI.sel=[];DB.update(o)},
+ swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
+  UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
+ repl(){const bs=binomes(UI.cls),a=UI.sel.find(x=>bs.some(b=>b.m.includes(x))),f=UI.sel.find(x=>x!==a),B1=bs.find(x=>x.m.includes(a));
+  UI.sel=[];DB.update({[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===a?f:x)})},
+ addto(){const bs=binomes(UI.cls),a=UI.sel.find(x=>bs.some(b=>b.m.includes(x))),f=UI.sel.find(x=>x!==a),B1=bs.find(x=>x.m.includes(a));
+  UI.sel=[];DB.update({[`binomes/${UI.cls}/${B1.id}/m`]:[...B1.m,f]})},
+ rmfrom(){const a=UI.sel[0],B1=binomes(UI.cls).find(x=>x.m.includes(a));UI.sel=[];
+  if(B1.m.length<=1)return DB.update({[`binomes/${UI.cls}/${B1.id}`]:null});DB.update({[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.filter(x=>x!==a)})},
  delb(d){ask('Défaire ce binôme ?',()=>DB.update({[`binomes/${UI.cls}/${d.v}`]:null}))},
  mkteams(){const cls=UI.cls,bs=binomes(cls),o={['teams/'+cls]:null};const ts={};
   for(let i=0,n=1;i<bs.length;i+=2,n++){let b=bs.slice(i,i+2).map(x=>x.id);if(bs.length-i===3){b=bs.slice(i,i+3).map(x=>x.id);i++}ts['t'+n]={n,b}}
   o['teams/'+cls]=ts;DB.update(o);toast(Object.keys(ts).length+' équipes formées')},
  /* courses */
- dep(d){const cls=UI.cls,c=C(d.c),u=units(d.c,cls).find(x=>x.id===d.v),s=state(d.c,cls,u),p=RP(d.c,cls,d.v),t=now(),o={};
+ dep(d){const cls=UI.cls,c=C(d.c),u=unitsAll(d.c,cls).find(x=>x.id===d.v),s=state(d.c,cls,u),p=RP(d.c,cls,d.v),t=now(),o={};
   if(!s.r.start){o[p+'/start']=t;o[p+'/m']=u.m;if(s.x)o[p+'/x']=s.x}
   if(c.type==='star'||c.type==='relay'){if(!s.next)return;o[p+'/out']={b:s.next,d:t,...(s.runner?{by:s.runner.id,lbl:s.runner.label}:{})}}
   DB.update(o)},
  startall(){ask('Lancer le départ de tous les binômes pas encore partis ?',()=>{const cls=UI.cls,cid=UI.tcourse||S.active?.[cls],t=now(),o={};
   units(cid,cls).forEach(u=>{const s=state(cid,cls,u);if(s.status==='idle'){o[RP(cid,cls,u.id)+'/start']=t;o[RP(cid,cls,u.id)+'/m']=u.m}});DB.update(o)})},
- ret(d){const u=units(d.c,UI.cls).find(x=>x.id===d.v),s=state(d.c,UI.cls,u);UI.modal={t:'kp',c:d.c,v:d.v,b:s.out.b,label:u.label,code:''};render()},
+ ret(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v),s=state(d.c,UI.cls,u);UI.modal={t:'kp',c:d.c,v:d.v,b:s.out.b,label:u.label,code:''};render()},
  k(d){const m=UI.modal;if(d.v==='del')m.code=m.code.slice(0,-1);else if(d.v==='ok'){if(!m.code)return;finishLeg(m,norm(m.code)===C(m.c).K[m.b]?.c,m.code);return}else if(m.code.length<4)m.code+=d.v;render()},
  manual(d){finishLeg(UI.modal,d.v==='1','')},
  undo(d){DB.update({[RP(d.c,UI.cls,d.v)+'/out']:null})},
- skip(d){const u=units(d.c,UI.cls).find(x=>x.id===d.v),s=state(d.c,UI.cls,u);ask(`Passer la balise ${s.next} ?`,()=>{const t=now(),p=RP(d.c,UI.cls,d.v),o={[p+'/legs/'+uid()]:{b:s.next,d:t,skip:true}};
+ skip(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v),s=state(d.c,UI.cls,u);ask(`Passer la balise ${s.next} ?`,()=>{const t=now(),p=RP(d.c,UI.cls,d.v),o={[p+'/legs/'+uid()]:{b:s.next,d:t,skip:true}};
   if(s.resolved+1>=C(d.c).n)o[p+'/finish']=t;DB.update(o)})},
  fin(d){ask('Arrêter le chrono de cette équipe ?',()=>{UI.modal=null;const p=RP(d.c,UI.cls,d.v);DB.update({[p+'/finish']:now(),[p+'/out']:null})})},
- arr(d){DB.update({[RP(d.c,UI.cls,d.v)+'/finish']:now()});const u=units(d.c,UI.cls).find(x=>x.id===d.v);setTimeout(()=>A.sheet(d),150)},
- sheet(d){const u=units(d.c,UI.cls).find(x=>x.id===d.v);UI.modal={t:C(d.c).type,c:d.c,v:d.v,label:u.label,ans:{...(R(d.c,UI.cls,d.v).ans||{})}};render()},
+ arr(d){DB.update({[RP(d.c,UI.cls,d.v)+'/finish']:now()});const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v);setTimeout(()=>A.sheet(d),150)},
+ sheet(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v);UI.modal={t:C(d.c).type,c:d.c,v:d.v,label:u.label,ans:{...(R(d.c,UI.cls,d.v).ans||{})}};render()},
  vf(d){UI.modal.ans['q'+d.q]=d.v;render()},
  savesheet(){const m=UI.modal;if(m.t==='score')document.querySelectorAll('#modal input[data-q]').forEach(i=>{const v=i.value.trim();if(v)m.ans['q'+i.dataset.q]=v;else delete m.ans['q'+i.dataset.q]});
   const p=RP(m.c,UI.cls,m.v);DB.update({[p+'/ans']:Object.keys(m.ans).length?m.ans:null,[p+'/valid']:true});UI.modal=null;
-  const u=units(m.c,UI.cls).find(x=>x.id===m.v);const s=state(m.c,UI.cls,u);toast(`${u.label} : ${s.final} pts`);render()},
+  const u=unitsAll(m.c,UI.cls).find(x=>x.id===m.v);const s=state(m.c,UI.cls,u);toast(`${u.label} : ${s.final} pts`);render()},
  unit(d){UI.modal={t:'unit',c:curCourse(UI.cls,'pcourse'),v:d.v};render()},
  /* comportement */
  beh(d){UI.modal={t:'beh',sid:d.v};render()},
@@ -487,7 +503,7 @@ function nextN(cls){return Math.max(0,...binomes(cls).map(b=>b.n))+1}
 function mkBinome(cls,m){DB.update({[`binomes/${cls}/${uid()}`]:{n:nextN(cls),m}})}
 function finishLeg(m,ok,code){const cls=UI.cls,p=RP(m.c,cls,m.v),r=R(m.c,cls,m.v),t=now();if(!r.out)return;
  const o={[p+'/out']:null,[p+'/legs/'+uid()]:{...r.out,r:t,code:code||'',ok:!!ok}};
- const u=units(m.c,cls).find(x=>x.id===m.v),s=state(m.c,cls,u);
+ const u=unitsAll(m.c,cls).find(x=>x.id===m.v),s=state(m.c,cls,u);
  if(ok&&s.resolved+1>=C(m.c).n)o[p+'/finish']=t;
  m.res=ok?'ok':'ko';DB.update(o);render();setTimeout(()=>{if(UI.modal===m){UI.modal=null;render()}},ok?1500:2500)}
 function parseCfg(v){const s=v.slice(v.indexOf('{'),v.lastIndexOf('}')+1);return JSON.parse(s.replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g,'$1"$2":').replace(/'/g,'"').replace(/,\s*}/g,'}'))}
