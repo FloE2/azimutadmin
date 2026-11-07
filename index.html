@@ -100,6 +100,10 @@ td.c,th.c{text-align:center}
 .clock.soon{background:linear-gradient(135deg,#e8590c,#fd7e14)}.clock.over{background:linear-gradient(135deg,#c2255c,#f06595);animation:pulse 1.2s infinite}
 .clock.end{background:linear-gradient(135deg,#495057,#868e96)}.clock.idle{background:linear-gradient(135deg,#1864ab,#339af0)}
 .clock .small{opacity:.9}
+.top .seg button.edit{background:linear-gradient(135deg,#f76707,#ff922b);border-color:#ffc078;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(247,103,7,.45)}
+.top .seg button.edit.on{background:#fff;color:#e8590c;border:2px solid #ff922b}
+.editbox{background:linear-gradient(135deg,#fff4e6,#ffe8cc);border:2px solid #ff922b;color:#7a3300;border-radius:14px;padding:12px 14px;margin-bottom:12px}
+@media (prefers-color-scheme:dark){.editbox{background:#3a2516;color:#ffd8a8}}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--forest);color:#fff;padding:11px 18px;border-radius:12px;z-index:30;opacity:0;transition:.2s;pointer-events:none;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #toast.show{opacity:1}
 @media print{.top,.noprint{display:none}main{padding:0}body{background:#fff}}
@@ -279,7 +283,7 @@ const ncls=n=>n==null?'':n>=14?'n-g':n>=10?'n-m':'n-b';
 let UI=Object.assign({role:'home',cls:'4A',tab:'suivi',pcourse:null,tcourse:null,atab:'feuilles',sel:[],absMode:false,modal:null},LS.get('co-ui',{}),{modal:null,sel:[]});
 /* liens directs : #prof-4A, #prof-4B, #prof-U, #prof-M, #tablette-4A, #tablette-4B, #admin */
 (()=>{const h=location.hash.slice(1).toLowerCase(),m=h.match(/^(prof|tablette)-(4a|4b|u|m)$/);
- if(m){UI.role=m[1]==='prof'?'prof':'tab';const x=m[2].toUpperCase();UI.cls=x.length===1?'4A':x;UI.me=x;UI.tab='suivi'}else if(h==='admin')UI.role='admin';
+ if(m){UI.role=m[1]==='prof'?'prof':'tab';const x=m[2].toUpperCase();UI.cls=x.length===1?'4A':x;UI.me=x;UI.tab=x==='U'||x==='M'?'comp':'suivi'}else if(h==='admin')UI.role='admin';
  if(h){LS.set('co-ui',{...LS.get('co-ui',{}),role:UI.role,cls:UI.cls,me:UI.me,tab:UI.tab});history.replaceState(null,'',location.pathname+location.search)}})();
 const saveUI=()=>LS.set('co-ui',{me:UI.me,role:UI.role,cls:UI.cls,tab:UI.tab,pcourse:UI.pcourse,tcourse:UI.tcourse,atab:UI.atab});
 let pend=false,CB=null;
@@ -320,8 +324,8 @@ function vHome(){const g=G();
 function vProf(){
  const cls=UI.cls;let body='';
  if(UI.tab==='suivi')body=vSuivi(cls);else if(UI.tab==='comp')body=vComp(cls);else if(UI.tab==='bilan')body=vBilan(cls);else if(UI.tab==='mat')body=vMat();else if(UI.tab==='bin')body=vBinomes(cls);else if(UI.tab==='admin')body=seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')+'<div style="height:10px"></div>'+vAdminBody();else body=vSecu(cls);
- return `<div class="top"><button data-a="home">⌂</button><h1>${esc(profName(UI.me||cls))}${RO()?' <span class="small" style="font-weight:500;opacity:.85">· consultation + comportement</span>':''}</h1>${seg([['4A','4A'],['4B','4B']],cls,'cls')}${status()}
- <div style="width:100%">${seg([['suivi','Suivi live'],['comp','Comportement'],['bilan','Bilan'],['bin','Binômes'],['mat','Matériel'],['secu','Sécurité'],...(RO()?[]:[['admin','Admin']])],UI.tab,'tab')}</div></div><main>${body}</main>`}
+ return `<div class="top"><button data-a="home">⌂</button><h1><span style="display:flex;flex-direction:column;line-height:1.15">${esc(profName(UI.me||cls))}${RO()?'<span class="small" style="font-weight:500;opacity:.85">accompagnateur</span>':''}</span></h1>${seg([['4A','4A'],['4B','4B']],cls,'cls')}${status()}
+ <div style="width:100%">${seg([['suivi',RO()?'👁 Suivi live':'Suivi live'],['comp',RO()?'✏️ Comportement':'Comportement',RO()?'edit':''],['bilan','Bilan'],['bin','Binômes'],['mat','Matériel'],['secu','Sécurité'],...(RO()?[]:[['admin','Admin']])],UI.tab,'tab')}</div></div><main>${body}</main>`}
 
 function curCourse(cls,which){return UI[which]||S.active?.[cls]||'etoile'}
 function courseSeg(cls,which){const act=S.active?.[cls];const cur=curCourse(cls,which);
@@ -342,8 +346,9 @@ function vSuivi(cls){
  h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span><button data-a="unact" data-v="${cid}">↩ Annuler : retirer de la tablette</button>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
  ${c.type==='relay'&&g.relayMode==='binomes'?`<button data-a="goteams">👥 Composer les équipes de relais (${teams(cls).length})</button>`:''}
  ${(c.type==='vfm'||c.type==='score')&&all.some(s=>s.status==='idle')?`<button class="go" data-a="startall" data-c="${cid}">▶ Départ groupé</button>`:''}</div>`;
+ if(RO())h+=`<p class="small" style="color:var(--acc);font-weight:600">✏️ Touchez un binôme pour noter le comportement de ses élèves.</p>`;
  if(alerts.length)h+=`<div class="banner">⚠ À surveiller : ${alerts.map(s=>s.u.label+' ('+names(s.u.m)+')').join(', ')}</div>`;
- if(!all.length)return h+`<p class="info">Aucun ${c.type==='relay'&&g.relayMode==='binomes'?'équipe de relais':'binôme'} pour la ${cls}. Créez-les dans l'onglet Binômes${c.type==='relay'?' puis sur la tablette (onglet Relais)':''}.</p>`;
+ if(!all.length)return h+`<p class="info">Aucun ${c.type==='relay'&&g.relayMode==='binomes'?'équipe de relais':'binôme'} pour la ${cls}. ${RO()?'Florian ou Emeric vont les créer.':`Créez-les dans l'onglet Binômes${c.type==='relay'?' (section Équipes de relais)':''}.`}</p>`;
  h+=`<p><span class="pill b">${cnt('out')} en course</span> <span class="pill">${cnt('base')+cnt('arrived')} à la base</span> <span class="pill ok">${cnt('done')} terminés</span> <span class="pill">${cnt('idle')} pas partis</span></p><div class="grid">`;
  all.forEach(s=>{h+=`<div class="card st-${s.status}" data-a="unit" data-v="${s.u.id}"><div class="row"><b>${s.u.label}</b><span class="names">${esc(names(s.r.m||s.u.m))}</span>${chrono(s)}</div><div class="small">${line(s)}</div></div>`});
  h+=`</div>`;
@@ -365,7 +370,7 @@ function line(s){const c=s.c,r=s.r;let t='';
 function rankTable(done,c){return `<div class="tw"><table><tr><th>#</th><th>Équipe</th><th class="c">Points</th><th class="c">Temps</th><th class="c">Pénalité</th></tr>${done.map(s=>`<tr><td>${s.rank}</td><td><b>${s.u.label}</b> <span class="small mut">${esc(names(s.r.m||s.u.m))}</span></td><td class="c"><b>${s.final}</b>/${c.total}</td><td class="c">${fmt(s.elapsed)}</td><td class="c">${s.pen?'−'+s.pen:''}</td></tr>`).join('')}</table></div>`}
 
 function vComp(cls){const g=G();
- return `<p class="small mut">Touchez un élève, puis une case. Vous notez en tant que <b>${esc(profName(UI.me||cls))}</b>. Note de départ ${g.base}/20 ; les points positifs ajoutent, les négatifs retirent. Si plusieurs profs notent le même élève, la note affichée est la moyenne de leurs notes.</p><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">${clsStu(cls).map(s=>{const n=behNote(s.id),c=behEv(s.id).length;
+ return `${RO()?`<div class="editbox"><b>✏️ C'est ici que vous pouvez agir.</b><br>Touchez un élève, puis une case : la note est enregistrée tout de suite. Le reste de l'appli est en consultation (👁).</div>`:''}<p class="small mut">Touchez un élève, puis une case. Vous notez en tant que <b>${esc(profName(UI.me||cls))}</b>. Note de départ ${g.base}/20 ; les points positifs ajoutent, les négatifs retirent. Si plusieurs profs notent le même élève, la note affichée est la moyenne de leurs notes.</p><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">${clsStu(cls).map(s=>{const n=behNote(s.id),c=behEv(s.id).length;
   return `<button class="stu ${absent(s.id)?'abs':''}" data-a="beh" data-v="${s.id}"><span>${esc(s.short)}${c?` <span class="small mut">(${c})</span>`:''}</span><span class="note ${ncls(n)}">${n}</span></button>`}).join('')}</div>`}
 
 function vBilan(cls){const N=coNotes(cls);
@@ -527,7 +532,7 @@ function ask(msg,cb){CB=cb;UI.modal={t:'confirm',msg};render()}
 
 /* ---------- actions ---------- */
 const A={
- go(d){UI.role=d.r;if(d.c)UI.cls=d.c;if(d.r==='prof')UI.me=d.me||d.c;UI.tab='suivi';saveUI();render()},
+ go(d){UI.role=d.r;if(d.c)UI.cls=d.c;if(d.r==='prof')UI.me=d.me||d.c;UI.tab=d.me?'comp':'suivi';saveUI();render()},
  home(){UI.role='home';saveUI();render()},
  cls(d){UI.cls=d.v;UI.sel=[];saveUI();render()},
  tab(d){UI.tab=d.v;saveUI();render()},
