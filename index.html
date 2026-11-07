@@ -81,6 +81,9 @@ td.c,th.c{text-align:center}
 .res{text-align:center;padding:34px 10px;font-size:1.7rem;font-weight:800;border-radius:16px}
 .res.ok{background:linear-gradient(135deg,#2f9e44,#69db7c);color:#fff}.res.ko{background:linear-gradient(135deg,#d6336c,#f783ac);color:#fff}
 .vfm{display:grid;grid-template-columns:40px repeat(3,1fr);gap:6px;align-items:center}
+.sc{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:12px;gap:0}
+.sc span{font-size:1.4rem;font-weight:800;line-height:1.2}.sc small{color:var(--mut);font-size:.75rem}
+.sc.ok{background:var(--okb);border-color:#2f9e44;color:var(--ok)}.sc.ko{background:var(--kob);border-color:var(--ko);color:var(--ko)}
 .vfm button.on{background:var(--forest);color:#fff}
 .home{max-width:540px;margin:0 auto;padding:0 16px 30px}
 .hero{background:linear-gradient(135deg,var(--forest),var(--forest2) 60%,#40a070);color:#fff;border-radius:0 0 26px 26px;padding:28px 20px 24px;margin:0 -16px 18px;position:relative;overflow:hidden;box-shadow:0 6px 20px rgba(20,60,35,.25)}
@@ -104,6 +107,7 @@ td.c,th.c{text-align:center}
 .top .seg button.edit.on{background:#fff;color:#e8590c;border:2px solid #ff922b}
 .editbox{background:linear-gradient(135deg,#fff4e6,#ffe8cc);border:2px solid #ff922b;color:#7a3300;border-radius:14px;padding:12px 14px;margin-bottom:12px}
 @media (prefers-color-scheme:dark){.editbox{background:#3a2516;color:#ffd8a8}}
+.pendbox{background:var(--acc2);border:2px solid #ff922b;border-radius:14px;padding:12px;margin-bottom:12px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--forest);color:#fff;padding:11px 18px;border-radius:12px;z-index:30;opacity:0;transition:.2s;pointer-events:none;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #toast.show{opacity:1}
 @media print{.top,.noprint{display:none}main{padding:0}body{background:#fff}}
@@ -245,7 +249,7 @@ function state(cid,cls,u){
   let pts=0,ok=0,err=0;
   if(r.valid)for(let i=1;i<=c.n;i++){const k=c.K[i];if(!k)continue;const a=norm(r.ans?.['q'+i]);
    if(c.type==='vfm'){if((a||'M')===k.c){pts++;ok++}else err++}
-   else if(a){if(a===k.c){pts+=k.p;ok++}else err++}}
+   else if(a==='OK'){pts+=k.p;ok++}else if(a==='KO')err++;else if(a){if(a===k.c){pts+=k.p;ok++}else err++}}
   Object.assign(st,{pts,ok,err});
  }
  st.late=r.start?Math.max(0,st.elapsed-c.limit*60000):0;st.tr=Math.ceil(st.late/30000);st.pen=st.tr*c.penalty;
@@ -268,7 +272,7 @@ const behEv=sid=>Object.entries(S.behav?.[sid]||{}).map(([k2,v])=>({k2,...v})).s
 const PROFS=()=>{const g=G();return [['4A',g.name4A],['4B',g.name4B],['U',g.nameU],['M',g.nameM]]};
 /* Florian et Emeric : tout. Ulysse et Amin : consultation + comportement uniquement */
 const RO=()=>UI.role==='prof'&&(UI.me==='U'||UI.me==='M');
-const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','dep','ret','undo','skip','fin','arr','sheet','savesheet','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
+const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
 const RO_OFF=new Set(['pick','tpick']);
 const who=e=>{const b=String(e.by||'');return b.startsWith('prof')?b.slice(4):'?'};
 const profName=k=>(PROFS().find(p=>p[0]===k)||[,'?'])[1];
@@ -343,6 +347,10 @@ function vSuivi(cls){
  const alerts=all.filter(s=>(s.out&&now()-s.out.d>g.alertRed*60000)||(s.r.start&&!s.r.finish&&s.late>0));
  let h=`${courseSeg(cls,'pcourse')}<p class="small mut">● = carte ouverte sur la tablette. Limite ${c.limit} min · pénalité ${c.penalty} pt / 30 s de retard. <button class="link" data-a="map" data-v="${cid}">Voir la carte</button></p>`;
  h+=clockBar(cls,cid,true);
+ if(c.type==='vfm'||c.type==='score'){const pend=all.filter(s=>s.status==='arrived').sort((a,b)=>a.r.finish-b.r.finish);
+  if(pend.length)h+=`<div class="pendbox"><b>📋 Cartons à valider (${pend.length})</b> <span class="small">dans l'ordre d'arrivée · le chrono est déjà arrêté</span><div class="grid" style="margin-top:8px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${pend.map(s=>{const ed=s.r.ed&&now()-s.r.ed.t<180000&&s.r.ed.w!==profName(UI.me||cls)?s.r.ed.w:'';
+   return `<button class="back" style="text-align:left;padding:12px" data-a="sheet" data-c="${cid}" data-v="${s.u.id}"><b>✎ ${s.u.label}</b> ${esc(names(s.r.m||s.u.m))}<br><span class="small">arrivé à ${hm(s.r.finish)} · ${fmt(s.elapsed)}${ed?' · ✏️ '+esc(ed)+' saisit…':''}</span></button>`}).join('')}</div></div>`}
+ if(c.type==='vfm'||c.type==='score')h+=`<p class="small mut">Les élèves appuient sur « Arrivée » sur la tablette (le chrono s'arrête), puis vous remettent le carton. Validez-le ici.</p>`;
  h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span><button data-a="unact" data-v="${cid}">↩ Annuler : retirer de la tablette</button>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
  ${c.type==='relay'&&g.relayMode==='binomes'?`<button data-a="goteams">👥 Composer les équipes de relais (${teams(cls).length})</button>`:''}
  ${(c.type==='vfm'||c.type==='score')&&all.some(s=>s.status==='idle')?`<button class="go" data-a="startall" data-c="${cid}">▶ Départ groupé</button>`:''}</div>`;
@@ -365,7 +373,7 @@ function line(s){const c=s.c,r=s.r;let t='';
  else if(s.status==='out')t=(c.type==='star'||c.type==='relay')?`→ balise <b>${s.out.b}</b>${s.out.lbl?' ('+esc(s.out.lbl)+')':''} depuis <b data-since="${s.out.d}" data-alert="${G().alert}" data-red="${G().alertRed}"></b>`:`En course · <span data-left="${r.start}" data-lim="${c.limit}" data-pen="${c.penalty}"></span>`;
  else if(s.status==='base')t=`À la base · prochaine : ${s.next}${s.retry?' (2e essai)':''} · <span data-left="${r.start}" data-lim="${c.limit}" data-pen="${c.penalty}"></span>`;
  else if(s.status==='arrived')t='Arrivé · carton à saisir';
- else t=`Terminé · <b>${s.final} pt${s.final>1?'s':''}</b>${s.pen?` (−${s.pen} retard)`:''} · ${s.rank?s.rank+'e':''}`;
+ else t=`Terminé · <b>${s.final} pt${s.final>1?'s':''}</b>${r.vby&&r.vby!=='tablette'?' <span class="small mut">(validé par '+esc(r.vby)+')</span>':''}${s.pen?` (−${s.pen} retard)`:''} · ${s.rank?s.rank+'e':''}`;
  return `${t} ${sc}`}
 function rankTable(done,c){return `<div class="tw"><table><tr><th>#</th><th>Équipe</th><th class="c">Points</th><th class="c">Temps</th><th class="c">Pénalité</th></tr>${done.map(s=>`<tr><td>${s.rank}</td><td><b>${s.u.label}</b> <span class="small mut">${esc(names(s.r.m||s.u.m))}</span></td><td class="c"><b>${s.final}</b>/${c.total}</td><td class="c">${fmt(s.elapsed)}</td><td class="c">${s.pen?'−'+s.pen:''}</td></tr>`).join('')}</table></div>`}
 
@@ -458,7 +466,7 @@ function tabCard(s,cid){const c=s.c,id=s.u.id,d=`data-c="${cid}" data-v="${id}"`
  }
  if(s.status==='idle')return `<button class="big go" data-a="dep" ${d}>▶ Départ</button>`;
  if(s.status==='out')return `<p><span data-left="${s.r.start}" data-lim="${c.limit}" data-pen="${c.penalty}"></span></p><button class="big back" data-a="arr" ${d}>⏹ Arrivée</button>`;
- if(s.status==='arrived')return `<p>Arrivé en ${fmt(s.elapsed)}</p><button class="big back" data-a="sheet" ${d}>✎ Saisir le carton</button>`;
+ if(s.status==='arrived')return `<p>Arrivé en <b>${fmt(s.elapsed)}</b></p><p class="info small" style="margin:0">📋 Donnez votre carton de contrôle à un adulte : il le valide sur son téléphone.</p>`;
  return `<p>Terminé · <b>${s.final} pts</b> ${s.pen?`(−${s.pen} retard)`:''} · ${s.rank?'<b>'+s.rank+'e</b>':''}</p>`;
 }
 
@@ -499,12 +507,17 @@ function vModal(){const m=UI.modal;
   if(C(m.c).verif==='manuel')return `<h3>${m.label} revient de la balise ${m.b}</h3><p>Comparez le poinçon du carton avec le corrigé.</p><div class="flex"><button class="big okbtn" style="flex:1" data-a="manual" data-v="1">✔ Juste</button><button class="big kobtn" style="flex:1" data-a="manual" data-v="0">✘ Faux</button></div><button class="link" data-a="close">annuler</button>`;
   return `<h3>${m.label} revient de la balise ${m.b}</h3><p class="mut">Tapez le code écrit sur la balise.</p><div class="kpd">${esc(m.code)}</div>
   <div class="kp">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-a="k" data-v="${n}">${n}</button>`).join('')}<button data-a="k" data-v="del">⌫</button><button data-a="k" data-v="0">0</button><button class="okbtn" data-a="k" data-v="ok">✔</button></div><button class="link" data-a="close">annuler</button>`}
- if(m.t==='vfm'){let h=`<h3>${m.label} · carton Vrai/Faux/Manquant</h3><p class="small mut">Pour chaque balise : V si poinçonné dans VRAI, F si dans FAUX, « rien » si aucun poinçon.</p><div class="vfm">`;
+ if(m.t==='vfm'){let h=`<h3>${m.label} · carton Vrai/Faux/Manquant</h3><p class="small mut">Recopiez le carton : VRAI si poinçonné dans la case VRAI, FAUX si dans la case FAUX. Laissez « rien » si aucun poinçon. ${Object.values(m.ans).filter(v=>v==='V'||v==='F').length} poinçon(s) saisi(s).</p><div class="vfm">`;
   for(let i=1;i<=20;i++){const a=m.ans['q'+i]||'M';h+=`<b>${i}</b>${[['V','VRAI'],['F','FAUX'],['M','rien']].map(([v,l])=>`<button class="${a===v?'on':''}" data-a="vf" data-q="${i}" data-v="${v}">${l}</button>`).join('')}`}
   return h+`</div><button class="big okbtn" data-a="savesheet">Valider le carton</button><button class="link" data-a="close">annuler</button>`}
- if(m.t==='score'){let h=`<h3>${m.label} · codes trouvés</h3><p class="small mut">Pour chaque balise poinçonnée, tapez le code écrit sur la balise. Laissez vide sinon.</p><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">`;
-  for(let i=1;i<=20;i++)h+=`<label class="small">Balise ${i} <span class="mut">(${C('score').K[i]?.p||'?'} pts)</span><input inputmode="numeric" data-q="${i}" value="${esc(m.ans['q'+i]||'')}" style="width:100%"></label>`;
-  return h+`</div><button class="big okbtn" data-a="savesheet">Valider</button><button class="link" data-a="close">annuler</button>`}
+ if(m.t==='score'){const K=C('score').K;let tot=0,n=0;
+  const st=i=>{const a=norm(m.ans['q'+i]);if(a==='OK')return 'ok';if(a==='KO')return 'ko';if(a)return a===K[i]?.c?'ok':'ko';return ''};
+  for(let i=1;i<=20;i++)if(st(i)==='ok'){tot+=K[i]?.p||0;n++}
+  let h=`<div class="row"><h3>${m.label} · carton Course au score</h3><span class="note n-g" style="font-size:1.2rem">${tot} pts</span></div>
+  <p class="small mut">Comparez chaque poinçon avec le carton de vérification. 1 tap = ✔ trouvée · 2 taps = ✘ mauvais poinçon · 3 taps = effacer. ${n} balise${n>1?'s':''} juste${n>1?'s':''}.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:7px">`;
+  for(let i=1;i<=20;i++){const x=st(i);h+=`<button class="sc ${x}" data-a="sc" data-q="${i}"><b>${i}</b><span>${x==='ok'?'✔':x==='ko'?'✘':'·'}</span><small>${K[i]?.p||'?'} pts</small></button>`}
+  return h+`</div><button class="big okbtn" data-a="savesheet">Valider le carton (${tot} pts)</button><button class="link" data-a="close">annuler</button>`}
  if(m.t==='beh'){const s=STU[m.sid],n=behNote(m.sid),ev=behEv(m.sid);
   return `<div class="row"><h3>${esc(s.prenom)} ${esc(s.nom)}</h3><span class="note ${ncls(n)}" style="font-size:1.4rem">${n}/20</span></div>${behDetail(m.sid)?`<p class="small mut" style="margin:0 0 8px">Moyenne de : ${esc(behDetail(m.sid))}</p>`:''}
   <div class="chips">${BEH.filter(b=>b[2]>0).map(b=>`<button class="chip p" data-a="addb" data-v="${b[0]}">+${b[2]} ${esc(b[1])}</button>`).join('')}</div>
@@ -543,7 +556,7 @@ const A={
  only(){UI.only=!UI.only;render()},
  print(){print()},
  map(d){UI.modal={t:'map',v:d.v};render()},
- close(){UI.modal=null;render()},
+ close(){const m=UI.modal;if(m&&(m.t==='vfm'||m.t==='score')&&UI.role==='prof')DB.update({[RP(m.c,UI.cls,m.v)+'/ed']:null});UI.modal=null;render()},
  yes(){const f=CB;CB=null;UI.modal=null;f&&f();render()},
  lock(){UI.modal={t:'pin'};render();setTimeout(()=>$('#pin')?.focus(),50)},
  unlock(){if($('#pin').value===String(G().pin)){UI.modal=null;UI.role='home';saveUI();render()}else toast('Code incorrect')},
@@ -602,11 +615,12 @@ const A={
  skip(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v),s=state(d.c,UI.cls,u);ask(`Passer la balise ${s.next} ?`,()=>{const t=now(),p=RP(d.c,UI.cls,d.v),o={[p+'/legs/'+uid()]:{b:s.next,d:t,skip:true}};
   if(s.resolved+1>=C(d.c).n)o[p+'/finish']=t;DB.update(o)})},
  fin(d){ask('Arrêter le chrono de cette équipe ?',()=>{UI.modal=null;const p=RP(d.c,UI.cls,d.v);DB.update({[p+'/finish']:now(),[p+'/out']:null})})},
- arr(d){DB.update({[RP(d.c,UI.cls,d.v)+'/finish']:now()});const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v);setTimeout(()=>A.sheet(d),150)},
- sheet(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v);UI.modal={t:C(d.c).type,c:d.c,v:d.v,label:u.label,ans:{...(R(d.c,UI.cls,d.v).ans||{})}};render()},
+ arr(d){DB.update({[RP(d.c,UI.cls,d.v)+'/finish']:now()});toast('Arrivée enregistrée : donnez votre carton au prof')},
+ sheet(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v);if(UI.role==='prof')DB.update({[RP(d.c,UI.cls,d.v)+'/ed']:{w:profName(UI.me||UI.cls),t:now()}});UI.modal={t:C(d.c).type,c:d.c,v:d.v,label:u.label,ans:{...(R(d.c,UI.cls,d.v).ans||{})}};render()},
  vf(d){UI.modal.ans['q'+d.q]=d.v;render()},
- savesheet(){const m=UI.modal;if(m.t==='score')document.querySelectorAll('#modal input[data-q]').forEach(i=>{const v=i.value.trim();if(v)m.ans['q'+i.dataset.q]=v;else delete m.ans['q'+i.dataset.q]});
-  const p=RP(m.c,UI.cls,m.v);DB.update({[p+'/ans']:Object.keys(m.ans).length?m.ans:null,[p+'/valid']:true});UI.modal=null;
+ sc(d){const a=UI.modal.ans,k='q'+d.q,v=a[k];if(!v||(v!=='OK'&&v!=='KO'))a[k]='OK';else if(v==='OK')a[k]='KO';else delete a[k];render()},
+ savesheet(){const m=UI.modal;
+  const p=RP(m.c,UI.cls,m.v);DB.update({[p+'/ans']:Object.keys(m.ans).length?m.ans:null,[p+'/valid']:true,[p+'/ed']:null,[p+'/vby']:UI.role==='prof'?profName(UI.me||UI.cls):'tablette'});UI.modal=null;
   const u=unitsAll(m.c,UI.cls).find(x=>x.id===m.v);const s=state(m.c,UI.cls,u);toast(`${u.label} : ${s.final} pts`);render()},
  unit(d){UI.modal={t:'unit',c:curCourse(UI.cls,'pcourse'),v:d.v};render()},
  /* comportement */
