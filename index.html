@@ -142,7 +142,7 @@ const COURSES = {
 };
 const ORDER = ['etoile','relais','vfm','score'];
 const SECU = "<h3>👥 La règle d'or : le binôme indissociable</h3>\n<p>Vous restez avec votre partenaire du début à la fin. Interdiction absolue de vous séparer, même pour aller chercher une balise « plus vite » ou aller aux toilettes. Vous partez ensemble, vous cherchez ensemble, vous rentrez ensemble.</p>\n<h3>🛑 Les limites du terrain</h3>\n<ul><li><b>Les barrières du parc :</b> ne franchissez jamais les grilles ou les sorties du parc. Tout le jeu se déroule à l'intérieur.</li>\n<li><b>Les zones d'eau :</b> interdiction d'approcher à moins de 5 mètres du Grand Canal, des bassins (Octogone, Aurore) et des cascades. On ne court pas sur les pontons.</li>\n<li><b>Les zones interdites :</b> espaces clos, chantiers, château (sauf consigne), parterres de fleurs interdits au public.</li></ul>\n<h3>🏃 Comportement et sécurité</h3>\n<ul><li><b>Attention aux autres :</b> le parc est ouvert au public. Ne bousculez pas les promeneurs, les jeunes enfants ou les personnes âgées. Attention aux vélos sur les grandes allées.</li>\n<li><b>La montre :</b> surveillez l'heure. L'heure de retour au point de rassemblement n'est pas négociable. Tout retard entraîne une pénalité ou l'arrêt de la course.</li>\n<li><b>Respect de la nature :</b> ne grimpez pas aux arbres, ne traversez pas les buissons denses.</li></ul>\n<h3>🚨 Si ton partenaire se blesse</h3>\n<ol><li><b>Sécurise :</b> installe-le assis ou allongé, à l'abri du passage.</li>\n<li><b>Ne le laisse jamais seul.</b></li>\n<li><b>Alerte :</b> appelle le numéro du professeur écrit sur ta carte, OU demande à un autre binôme ou à un adulte du parc d'aller prévenir les professeurs au point de rassemblement, en donnant votre position exacte (ex. « Près du bassin de l'Octogone », « balise n°12 »).</li></ol>\n<h3>🧭 Si vous êtes perdus</h3>\n<ol><li><b>Arrêtez de courir au hasard.</b> Repérez un point haut (le Château, le Grand Canal).</li>\n<li><b>Rejoignez une grande allée</b> en marchant calmement : vous y croiserez un professeur, un adulte ou la sécurité du parc.</li>\n<li><b>Heure limite dépassée :</b> restez visibles sur une grande allée et appelez le professeur. Ne bougez plus.</li></ol>\n<h3>🎒 Dans le sac de chaque binôme</h3>\n<ul><li>1 montre ou 1 téléphone chargé</li><li>La carte avec le numéro du professeur écrit en rouge</li><li>Une gourde et un en-cas sucré</li><li>Un vêtement de pluie / coupe-vent</li></ul>\n";
-const GDEF = {name4A:'Florian',name4B:'Emeric',phone4A:'',phone4B:'',nameU:'Ulysse',phoneU:'',rally:'',alert:8,alertRed:12,pin:'1234',base:15,relayMode:'binomes'};
+const GDEF = {name4A:'Florian',name4B:'Emeric',phone4A:'',phone4B:'',nameU:'Ulysse',phoneU:'',nameM:'Amin',phoneM:'',rally:'',alert:8,alertRed:12,pin:'1234',base:15,relayMode:'binomes'};
 const BEH = [
  ['p1','Respecte les consignes',1],['p2','Reste avec son binôme',1],['p3','Entraide, fair-play',1],['p4','Très investi(e)',1],
  ['p5','Calme, respecte le public',1],['p6','Ponctuel(le) au retour',1],['p7','Soin du matériel',1],['p8','Leader positif',2],
@@ -261,7 +261,11 @@ function coNotes(cls){
  return N;
 }
 const behEv=sid=>Object.entries(S.behav?.[sid]||{}).map(([k2,v])=>({k2,...v})).sort((a,b)=>b.t-a.t);
-const PROFS=()=>{const g=G();return [['4A',g.name4A],['4B',g.name4B],['U',g.nameU]]};
+const PROFS=()=>{const g=G();return [['4A',g.name4A],['4B',g.name4B],['U',g.nameU],['M',g.nameM]]};
+/* Florian et Emeric : tout. Ulysse et Amin : consultation + comportement uniquement */
+const RO=()=>UI.role==='prof'&&(UI.me==='U'||UI.me==='M');
+const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','dep','ret','undo','skip','fin','arr','sheet','savesheet','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
+const RO_OFF=new Set(['pick','tpick']);
 const who=e=>{const b=String(e.by||'');return b.startsWith('prof')?b.slice(4):'?'};
 const profName=k=>(PROFS().find(p=>p[0]===k)||[,'?'])[1];
 /* une note par prof (départ + ses cases), puis moyenne des profs qui ont noté l'élève */
@@ -273,20 +277,25 @@ const ncls=n=>n==null?'':n>=14?'n-g':n>=10?'n-m':'n-b';
 
 /* ---------- état d'interface ---------- */
 let UI=Object.assign({role:'home',cls:'4A',tab:'suivi',pcourse:null,tcourse:null,atab:'feuilles',sel:[],absMode:false,modal:null},LS.get('co-ui',{}),{modal:null,sel:[]});
-/* liens directs : #prof-4A, #prof-4B, #prof-U, #tablette-4A, #tablette-4B, #admin */
-(()=>{const h=location.hash.slice(1).toLowerCase(),m=h.match(/^(prof|tablette)-(4a|4b|u)$/);
- if(m){UI.role=m[1]==='prof'?'prof':'tab';UI.cls=m[2]==='u'?'4A':m[2].toUpperCase();UI.me=m[2]==='u'?'U':UI.cls;UI.tab='suivi'}else if(h==='admin')UI.role='admin';
+/* liens directs : #prof-4A, #prof-4B, #prof-U, #prof-M, #tablette-4A, #tablette-4B, #admin */
+(()=>{const h=location.hash.slice(1).toLowerCase(),m=h.match(/^(prof|tablette)-(4a|4b|u|m)$/);
+ if(m){UI.role=m[1]==='prof'?'prof':'tab';const x=m[2].toUpperCase();UI.cls=x.length===1?'4A':x;UI.me=x;UI.tab='suivi'}else if(h==='admin')UI.role='admin';
  if(h){LS.set('co-ui',{...LS.get('co-ui',{}),role:UI.role,cls:UI.cls,me:UI.me,tab:UI.tab});history.replaceState(null,'',location.pathname+location.search)}})();
 const saveUI=()=>LS.set('co-ui',{me:UI.me,role:UI.role,cls:UI.cls,tab:UI.tab,pcourse:UI.pcourse,tcourse:UI.tcourse,atab:UI.atab});
 let pend=false,CB=null;
 function scheduleRender(){const a=document.activeElement;if(a&&a.matches('input,textarea,select')&&a.type!=='checkbox'){pend=true;return}render()}
 document.addEventListener('focusout',()=>setTimeout(()=>{if(pend&&!document.activeElement.matches('input,textarea,select'))render()},60));
 
+function lockRO(){if(UI.tab==='admin'){UI.tab='suivi';return render()}
+ document.querySelectorAll('[data-a]').forEach(e=>{const a=e.dataset.a;if(RO_HIDE.has(a))e.remove();else if(RO_OFF.has(a)){e.removeAttribute('data-a');e.style.cursor='default'}});
+ document.querySelectorAll('[data-f],[data-s],#newmat').forEach(e=>{e.disabled=true;if(e.id==='newmat')e.closest('.flex')?.remove()});
+ document.querySelectorAll('.info').forEach(e=>{if(/Touchez (2|un|1)|touchez \<b\>2/i.test(e.innerHTML)&&!e.closest('#modal'))e.style.display='none'})}
 function render(){
  pend=false;
  const v=UI.role==='prof'?vProf():UI.role==='tab'?vTab():UI.role==='admin'?vAdmin():vHome();
  $('#app').innerHTML=v;
  const m=$('#modal');m.innerHTML=UI.modal?`<div class="sheet">${vModal()}</div>`:'';m.className=UI.modal?'open':'';
+ if(RO())lockRO();
  const tp=document.querySelector('.top');document.documentElement.style.setProperty('--clocktop',(tp?tp.offsetHeight:0)+6+'px');
  tick();
 }
@@ -300,7 +309,8 @@ function vHome(){const g=G();
  <h2>Cet appareil est…</h2>
  <button data-a="go" data-r="prof" data-c="4A">📱 Téléphone prof – 4A (${esc(g.name4A)})</button>
  <button data-a="go" data-r="prof" data-c="4B">📱 Téléphone prof – 4B (${esc(g.name4B)})</button>
- <button data-a="go" data-r="prof" data-c="4A" data-me="U">📱 Téléphone prof – 4A + 4B (${esc(g.nameU)})</button>
+ <button data-a="go" data-r="prof" data-c="4A" data-me="U">👀 Téléphone accompagnateur – 4A + 4B (${esc(g.nameU)})</button>
+ <button data-a="go" data-r="prof" data-c="4A" data-me="M">👀 Téléphone accompagnateur – 4A + 4B (${esc(g.nameM)})</button>
  <button data-a="go" data-r="tab" data-c="4A">📋 Tablette élèves – 4A</button>
  <button data-a="go" data-r="tab" data-c="4B">📋 Tablette élèves – 4B</button>
  <button data-a="go" data-r="admin">🗂 Admin : feuilles, réglages, connexion</button>
@@ -310,8 +320,8 @@ function vHome(){const g=G();
 function vProf(){
  const cls=UI.cls;let body='';
  if(UI.tab==='suivi')body=vSuivi(cls);else if(UI.tab==='comp')body=vComp(cls);else if(UI.tab==='bilan')body=vBilan(cls);else if(UI.tab==='mat')body=vMat();else if(UI.tab==='bin')body=vBinomes(cls);else if(UI.tab==='admin')body=seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')+'<div style="height:10px"></div>'+vAdminBody();else body=vSecu(cls);
- return `<div class="top"><button data-a="home">⌂</button><h1>${esc(profName(UI.me||cls))}</h1>${seg([['4A','4A'],['4B','4B']],cls,'cls')}${status()}
- <div style="width:100%">${seg([['suivi','Suivi live'],['comp','Comportement'],['bilan','Bilan'],['bin','Binômes'],['mat','Matériel'],['secu','Sécurité'],['admin','Admin']],UI.tab,'tab')}</div></div><main>${body}</main>`}
+ return `<div class="top"><button data-a="home">⌂</button><h1>${esc(profName(UI.me||cls))}${RO()?' <span class="small" style="font-weight:500;opacity:.85">· consultation + comportement</span>':''}</h1>${seg([['4A','4A'],['4B','4B']],cls,'cls')}${status()}
+ <div style="width:100%">${seg([['suivi','Suivi live'],['comp','Comportement'],['bilan','Bilan'],['bin','Binômes'],['mat','Matériel'],['secu','Sécurité'],...(RO()?[]:[['admin','Admin']])],UI.tab,'tab')}</div></div><main>${body}</main>`}
 
 function curCourse(cls,which){return UI[which]||S.active?.[cls]||'etoile'}
 function courseSeg(cls,which){const act=S.active?.[cls];const cur=curCourse(cls,which);
@@ -381,7 +391,7 @@ function vMat(){
 function vSecu(cls){const g=G();
  return `<div class="secu">
  <div class="info"><b>Point de rassemblement :</b> ${esc(g.rally)||'<i>à renseigner dans Admin › Réglages</i>'}<br>
- <b>Prof 4A</b> (${esc(g.name4A)}) : ${esc(g.phone4A)||'–'} · <b>Prof 4B</b> (${esc(g.name4B)}) : ${esc(g.phone4B)||'–'} · <b>Prof 4A + 4B</b> (${esc(g.nameU)}) : ${esc(g.phoneU)||'–'}<br>
+ <b>Prof 4A</b> (${esc(g.name4A)}) : ${esc(g.phone4A)||'–'} · <b>Prof 4B</b> (${esc(g.name4B)}) : ${esc(g.phone4B)||'–'} · <b>Accompagnateurs</b> : ${esc(g.nameU)} ${esc(g.phoneU)||'–'} · ${esc(g.nameM)} ${esc(g.phoneM)||'–'}<br>
  <b>Urgence parcs des Hauts-de-Seine :</b> <a href="tel:0141872860">01 41 87 28 60</a> · <b>SAMU</b> <a href="tel:15">15</a> · <b>Urgences</b> <a href="tel:112">112</a></div>
  ${SECU}</div>`}
 
@@ -459,7 +469,7 @@ function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on'
   <td class="c"><input type="checkbox" data-f="forms/${s.id}/s" ${f(s).s?'checked':''}></td><td class="c"><input type="checkbox" data-f="forms/${s.id}/i" ${f(s).i?'checked':''}></td><td class="c"><input type="checkbox" data-f="absent/${s.id}" ${absent(s.id)?'checked':''}></td></tr>`).join('')}</table></div>`}
  return h}
 function vReg(){const g=G();const f=(k,l,t='text')=>`<label>${l}<input type="${t}" data-s="settings/g/${k}" value="${esc(g[k])}"></label>`;
- let h=`<div class="form"><h2>Général</h2>${f('rally','Point de rassemblement')}${f('name4A','Prof 4A')}${f('phone4A','Téléphone prof 4A','tel')}${f('name4B','Prof 4B')}${f('phone4B','Téléphone prof 4B','tel')}${f('nameU','Prof 4A + 4B')}${f('phoneU','Téléphone prof 4A + 4B','tel')}
+ let h=`<div class="form"><h2>Général</h2>${f('rally','Point de rassemblement')}${f('name4A','Prof 4A')}${f('phone4A','Téléphone prof 4A','tel')}${f('name4B','Prof 4B')}${f('phone4B','Téléphone prof 4B','tel')}${f('nameU','Accompagnateur 1')}${f('phoneU','Téléphone accompagnateur 1','tel')}${f('nameM','Accompagnateur 2')}${f('phoneM','Téléphone accompagnateur 2','tel')}
  ${f('alert','Alerte ORANGE : un binôme cherche une balise depuis plus de (min)','number')}${f('alertRed','Alerte ROUGE + bandeau « À surveiller » : depuis plus de (min)','number')}${f('base','Note de comportement de départ (/20)','number')}${f('pin','Code pour quitter le mode tablette')}
  <label>Relais étoile : qui se relaie ?<select data-s="settings/g/relayMode"><option value="binomes" ${g.relayMode==='binomes'?'selected':''}>Deux binômes se relaient (respecte « binôme indissociable »)</option><option value="eleves" ${g.relayMode==='eleves'?'selected':''}>Les 2 élèves du binôme se relaient (comme le livre)</option></select></label>`;
  ORDER.forEach(id=>{const c=C(id),p=`settings/courses/${id}/`;
@@ -618,10 +628,10 @@ function finishLeg(m,ok,code){const cls=UI.cls,p=RP(m.c,cls,m.v),r=R(m.c,cls,m.v
 function parseCfg(v){const s=v.slice(v.indexOf('{'),v.lastIndexOf('}')+1);return JSON.parse(s.replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g,'$1"$2":').replace(/'/g,'"').replace(/,\s*}/g,'}'))}
 function dl(name,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
 
-document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;if(el.id==='modal')return;const f=A[el.dataset.a];if(f){e.preventDefault();f(el.dataset,el)}});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;if(el.id==='modal')return;const f=A[el.dataset.a];if(f){e.preventDefault();if(RO()&&RO_HIDE.has(el.dataset.a))return toast('Réservé à Florian et Emeric');f(el.dataset,el)}});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&UI.modal&&UI.modal.t!=='kp'){UI.modal=null;render()}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='newmat'){e.preventDefault();A.addmat()}});
-document.addEventListener('change',e=>{const el=e.target;
+document.addEventListener('change',e=>{const el=e.target;if(RO()&&(el.dataset.f||el.dataset.s)){render();return toast('Réservé à Florian et Emeric')}
  if(el.dataset.f)DB.update({[el.dataset.f]:el.checked?true:null});
  else if(el.dataset.s){let v=el.value;if(el.type==='number')v=+v;DB.update({[el.dataset.s]:v});toast('Enregistré')}
  else if(el.dataset.ev)DB.update({[el.dataset.ev]:el.value.trim()||null});});
