@@ -410,9 +410,26 @@ function vComp(cls){const g=G();
  return `${RO()?`<div class="editbox"><b>✏️ C'est ici que vous pouvez agir.</b><br>Touchez un élève, puis une case : la note est enregistrée tout de suite. Le reste de l'appli est en consultation (👁).</div>`:''}<p class="small mut">Touchez un élève, puis une case. Vous notez en tant que <b>${esc(profName(UI.me||cls))}</b>. Note de départ ${g.base}/20 ; les points positifs ajoutent, les négatifs retirent. Si plusieurs profs notent le même élève, la note affichée est la moyenne de leurs notes.</p><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">${clsStu(cls).map(s=>{const n=behNote(s.id),c=behEv(s.id).length;
   return `<button class="stu ${absent(s.id)?'abs':''}" data-a="beh" data-v="${s.id}"><span>${esc(s.short)}${c?` <span class="small mut">(${c})</span>`:''}</span><span class="note ${ncls(n)}">${n}</span></button>`}).join('')}</div>`}
 
+/* Classement général par binôme : somme des notes CO des parcours (chacune /20), puis le moins d'erreurs, puis le plus de balises justes */
+function general(classes){const rows=[];
+ classes.forEach(cls=>{const N=coNotes(cls);binomes(cls).forEach(b=>{const m=b.m.filter(x=>N[x]&&!absent(x));if(!m.length)return;
+  const per=ORDER.map(cid=>{const v=m.map(x=>N[x].per[cid]).filter(x=>x!=null);return v.length?Math.max(...v):null});
+  const done=per.filter(x=>x!=null);const tot=r05(done.reduce((a,x)=>a+x,0));
+  const err=m.reduce((a,x)=>a+N[x].err,0)/m.length,ok=m.reduce((a,x)=>a+N[x].ok,0)/m.length;
+  rows.push({cls,b,m,per,tot,n:done.length,err:Math.round(err*10)/10,ok:Math.round(ok)})})});
+ rows.sort((a,b)=>b.tot-a.tot||a.err-b.err||b.ok-a.ok);
+ let rk=0;rows.forEach((r,i)=>{if(!i||r.tot!==rows[i-1].tot||r.err!==rows[i-1].err||r.ok!==rows[i-1].ok)rk=i+1;r.rank=rk});return rows}
+function vGeneral(cls){const both=UI.gscope==='both',rows=general(both?['4A','4B']:[cls]),nc=Math.max(0,...rows.map(r=>r.n));
+ const medal=r=>r.n?(r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':r.rank):'–';
+ return `<h2>🏆 Classement général CO</h2>
+ ${seg([['cls','Classe '+cls],['both','4A + 4B']],both?'both':'cls','gs')}
+ <p class="small mut">Pour chaque binôme : la note CO de chaque parcours (/20 : réussite + place) est additionnée. ${nc?`Total sur ${nc*20} (${nc} parcours terminé${nc>1?'s':''}).`:'Aucun parcours terminé pour l\'instant.'} En cas d'égalité : le moins d'erreurs, puis le plus de balises justes.${both?' Attention : la place dans chaque parcours est calculée dans la classe.':''}</p>
+ ${rows.length?`<div class="tw"><table><tr><th class="c">Rang</th><th>Binôme</th><th class="c">Total</th><th class="c">Erreurs</th>${ORDER.map(id=>`<th class="c">${C(id).short}</th>`).join('')}</tr>
+ ${rows.map(r=>`<tr ${r.n&&r.rank<=3?'style="font-weight:600"':''}><td class="c" style="font-size:1.15rem">${medal(r)}</td><td style="min-width:150px"><b>B${r.b.n}</b>${both?` <span class="pill">${r.cls}</span>`:''}<div class="small mut">${esc(names(r.m))}</div></td><td class="c"><span class="note ${r.n?ncls(r.tot/r.n):''}">${String(r.tot).replace('.',',')}</span></td><td class="c"><span class="${r.err>=3?'pill ko':''}">${String(r.err).replace('.',',')}</span></td>${r.per.map(v=>`<td class="c small">${v==null?'–':String(v).replace('.',',')}</td>`).join('')}</tr>`).join('')}</table></div>`:'<p class="info">Formez les binômes pour voir le classement.</p>'}
+ <h2>Bilan par élève</h2>`}
 function vBilan(cls){const N=coNotes(cls);
  const rows=clsStu(cls).map(s=>{const b=behNote(s.id),n=N[s.id];return {s,b,n,ev:behEv(s.id)}});
- return `<div class="flex noprint"><button data-a="csv">⬇ Export CSV (tableur)</button><button data-a="print">Imprimer</button></div>
+ return `<div class="flex noprint"><button data-a="csv">⬇ Export CSV (tableur)</button><button data-a="print">Imprimer</button></div>${vGeneral(cls)}
  <p class="small mut">✔/✘ = balises justes / erreurs de l'élève (en relais : seulement les balises qu'il a courues). <span class="pill ko">✘ 3+</span> = élève en difficulté. Classement : points, puis temps, puis le moins d'erreurs en cas d'égalité parfaite.</p><p class="small mut">Note CO par parcours = 15 × réussite (points obtenus ÷ maximum ; ${C('score').ref} pts suffisent à la course au score) + 5 × place au classement de la classe. Note CO = moyenne des parcours terminés.</p>
  <div class="tw"><table><tr><th>Élève</th><th class="c">Comport.</th><th class="c">CO</th>${ORDER.map(id=>`<th class="c">${C(id).short}</th>`).join('')}<th class="c">✔/✘</th><th>Remarques</th></tr>
  ${rows.map(({s,b,n,ev})=>`<tr ${absent(s.id)?'class="mut"':''}><td>${esc(s.nom)} ${esc(s.prenom)}${absent(s.id)?' (abs.)':''}</td><td class="c"><span class="note ${ncls(b)}">${b}</span>${behDetail(s.id)?`<div class="small mut">${esc(behDetail(s.id))}</div>`:''}</td><td class="c"><span class="note ${ncls(n.avg)}">${n.avg??'–'}</span></td>${ORDER.map(id=>`<td class="c small">${n.per[id]??''}</td>`).join('')}<td class="c small">${n.ok} / <span class="${n.err>=3?'pill ko':''}">${n.err}</span></td><td class="small">${ev.map(e=>esc(BEHM[e.k]?.t+(e.txt?' : '+e.txt:'')+' ('+profName(who(e))+')')).join(' ; ')}</td></tr>`).join('')}</table></div>`}
@@ -613,6 +630,7 @@ const A={
  unact(d){const cls=UI.cls,prev=S.activePrev?.[cls];ask(prev?`Remettre « ${C(prev).name} » sur la tablette ${cls} ?`:`Retirer ce parcours de la tablette ${cls} ? (elle affichera « En attente »)`,()=>{DB.update({['active/'+cls]:prev||null,['activePrev/'+cls]:null});toast(prev?C(prev).name+' remis sur la tablette':'Tablette en attente')})},
  resetcourse(d){const cls=UI.cls,c=C(d.v);ask(`Remettre « ${c.name} » à zéro pour la ${cls} ? Tous les chronos, balises et cartons de ce parcours seront effacés. Les binômes, équipes et notes de comportement sont conservés.`,()=>DB.update({[`runs/${d.v}/${cls}`]:null,[`clock/${cls}/${d.v}`]:null,[`cycle/${d.v}/${cls}`]:null}))},
  reroll(d){ask('Faire un nouveau tirage de l\'ordre des balises ?',()=>{DB.update({[`cycle/${d.v}/${UI.cls}`]:makeCycle(d.v,C(d.v).n)});toast('Nouvel ordre tiré')})},
+ gs(d){UI.gscope=d.v==='both'?'both':'cls';render()},
  resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
@@ -663,6 +681,7 @@ const A={
  delbeh(d){DB.update({[`behav/${UI.modal.sid}/${d.v}`]:null})},
  csv(){const rows=[['Classe','Nom','Prénom','Absent','Note comportement /20',...PROFS().map(p=>'Comport. '+p[1]),'Note CO /20',...ORDER.map(id=>C(id).name),'Balises justes','Erreurs','Remarques']];
   for(const cls in STUDENTS){const N=coNotes(cls);clsStu(cls).forEach(s=>{const n=N[s.id];rows.push([cls,s.nom,s.prenom,absent(s.id)?'oui':'',behNote(s.id),...PROFS().map(p=>behNotes(s.id).per[p[0]]??''),n.avg??'',...ORDER.map(id=>n.per[id]??''),n.ok,n.err,behEv(s.id).map(e=>BEHM[e.k]?.t+(e.txt?' : '+e.txt:'')+' ('+profName(who(e))+')').join(' ; ')])})}
+  rows.push([]);rows.push(['Classement général','Classe','Binôme','Élèves',...ORDER.map(id=>C(id).name),'Total','Erreurs']);general(['4A','4B']).forEach(r=>rows.push([r.rank,r.cls,'B'+r.b.n,names(r.m),...r.per.map(v=>v??''),r.tot,r.err]));
   dl('bilan-azimut-sceaux.csv','﻿'+rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(';')).join('\n'),'text/csv')},
  backup(){dl('azimut-sauvegarde.json',JSON.stringify(S,null,1),'application/json')},
  savecfg(){const t=$('#fbcfg');let fb=CFG.fb;if(t){const v=t.value.trim();if(!v)fb=null;else{try{fb=parseCfg(v)}catch(e){return toast('Config illisible')}}}
