@@ -137,7 +137,7 @@ const MAPS = {"etoile": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD
 const COURSES = {
  etoile:{short:'Étoile',name:'Parcours étoile',type:'star',n:16,limit:40,penalty:1,verif:'code',
   key:'1:46, 2:54, 3:64, 4:65, 5:59, 6:42, 7:43, 8:62, 9:69, 10:55, 11:47, 12:70, 13:49, 14:60, 15:57, 16:41',
-  desc:"16 balises. Le binôme part de la base vers UNE balise, revient la faire valider ici, puis repart vers la suivante. Classement : balises justes, puis temps."},
+  desc:"16 balises. Le binôme part de la base vers UNE balise (l'ordre est tiré au hasard et affiché ici), revient la faire valider, puis repart vers la suivante. Classement : balises justes, puis temps."},
  relais:{short:'Relais',name:'Relais étoile',type:'relay',n:16,limit:40,penalty:1,verif:'code',
   key:'1:80, 2:67, 3:60, 4:74, 5:79, 6:77, 7:73, 8:66, 9:46, 10:48, 11:71, 12:64, 13:42, 14:61, 15:54, 16:53',
   desc:"16 balises par équipe. Les relayeurs partent chacun leur tour : un part, l'autre attend à la base et récupère. Une seule balise par départ."},
@@ -149,6 +149,25 @@ const COURSES = {
   desc:"20 balises de 5 à 20 points, dans l'ordre que vous voulez. Départ groupé, 45 min. Chaque tranche de 30 s de retard coûte des points."}
 };
 const ORDER = ['etoile','relais','vfm','score'];
+/* Position du départ (triangle) et des balises relevée sur les cartes (pixels de la photo) ; m = mètres par pixel */
+const GEO = {
+ etoile:{m:.47,base:[553,1165],b:{1:[297,1245],2:[530,855],3:[762,977],4:[820,1328],5:[712,1512],6:[272,1500],7:[281,658],8:[752,668],9:[866,1170],10:[483,1700],11:[318,935],12:[936,882],13:[255,1695],14:[742,1180],15:[563,598],16:[178,1120]}},
+ relais:{m:.78,base:[905,1190],b:{1:[1212,1665],2:[845,650],3:[828,1037],4:[1100,1400],5:[1205,1385],6:[1070,940],7:[995,665],8:[942,1578],9:[562,1075],10:[568,905],11:[962,1460],12:[838,915],13:[543,1230],14:[790,1485],15:[700,840],16:[665,1012]}}};
+/* distance aller-retour base → balise, en mètres (à vol d'oiseau) */
+const legM=(cid,b)=>{const g=GEO[cid];if(!g||!g.b[b])return 0;return Math.round(2*Math.hypot(g.b[b][0]-g.base[0],g.b[b][1]-g.base[1])*g.m)};
+/* tirage d'un ordre aléatoire dont les positions paires et impaires font la même distance
+   → dans un relais, les deux relayeurs courent autant, quel que soit le point de départ dans le cycle */
+function makeCycle(cid,n){let best=null,bd=1e9;const base=Array.from({length:n},(_,i)=>i+1);
+ for(let k=0;k<4000;k++){const a=base.slice();for(let i=n-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+  let e=0,o=0;a.forEach((b,i)=>i%2?o+=legM(cid,b):e+=legM(cid,b));
+  /* évite aussi deux très longues balises à la suite pour le même binôme */
+  let pen=0;for(let i=0;i<n-2;i++)if(legM(cid,a[i])+legM(cid,a[i+2])>1.6*Math.max(...base.map(b=>legM(cid,b))))pen+=50;
+  const d=Math.abs(e-o)+pen;if(d<bd){bd=d;best=a}}return best}
+const cycleOf=(cid,cls)=>S.cycle?.[cid]?.[cls]||null;
+function orderOf(cid,cls,u,r){if(r.seq)return r.seq;if(r.x)return seq(r.x,C(cid).n);const cy=cycleOf(cid,cls);if(!cy)return null;
+ const us=units(cid,cls),i=Math.max(0,us.findIndex(x=>x.id===u.id)),n=cy.length,off=Math.floor(i*n/Math.max(us.length,1))%n;return cy.slice(off).concat(cy.slice(0,off))}
+function splitM(cid,ord,k){const t=Array(k).fill(0);ord.forEach((b,i)=>t[i%k]+=legM(cid,b));return t}
+const km=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':m+' m';
 const SECU = "<h3>👥 La règle d'or : le binôme indissociable</h3>\n<p>Vous restez avec votre partenaire du début à la fin. Interdiction absolue de vous séparer, même pour aller chercher une balise « plus vite » ou aller aux toilettes. Vous partez ensemble, vous cherchez ensemble, vous rentrez ensemble.</p>\n<h3>🛑 Les limites du terrain</h3>\n<ul><li><b>Les barrières du parc :</b> ne franchissez jamais les grilles ou les sorties du parc. Tout le jeu se déroule à l'intérieur.</li>\n<li><b>Les zones d'eau :</b> interdiction d'approcher à moins de 5 mètres du Grand Canal, des bassins (Octogone, Aurore) et des cascades. On ne court pas sur les pontons.</li>\n<li><b>Les zones interdites :</b> espaces clos, chantiers, château (sauf consigne), parterres de fleurs interdits au public.</li></ul>\n<h3>🏃 Comportement et sécurité</h3>\n<ul><li><b>Attention aux autres :</b> le parc est ouvert au public. Ne bousculez pas les promeneurs, les jeunes enfants ou les personnes âgées. Attention aux vélos sur les grandes allées.</li>\n<li><b>La montre :</b> surveillez l'heure. L'heure de retour au point de rassemblement n'est pas négociable. Tout retard entraîne une pénalité ou l'arrêt de la course.</li>\n<li><b>Respect de la nature :</b> ne grimpez pas aux arbres, ne traversez pas les buissons denses.</li></ul>\n<h3>🚨 Si ton partenaire se blesse</h3>\n<ol><li><b>Sécurise :</b> installe-le assis ou allongé, à l'abri du passage.</li>\n<li><b>Ne le laisse jamais seul.</b></li>\n<li><b>Alerte :</b> appelle le numéro du professeur écrit sur ta carte, OU demande à un autre binôme ou à un adulte du parc d'aller prévenir les professeurs au point de rassemblement, en donnant votre position exacte (ex. « Près du bassin de l'Octogone », « balise n°12 »).</li></ol>\n<h3>🧭 Si vous êtes perdus</h3>\n<ol><li><b>Arrêtez de courir au hasard.</b> Repérez un point haut (le Château, le Grand Canal).</li>\n<li><b>Rejoignez une grande allée</b> en marchant calmement : vous y croiserez un professeur, un adulte ou la sécurité du parc.</li>\n<li><b>Heure limite dépassée :</b> restez visibles sur une grande allée et appelez le professeur. Ne bougez plus.</li></ol>\n<h3>🎒 Dans le sac de chaque binôme</h3>\n<ul><li>1 montre ou 1 téléphone chargé</li><li>La carte avec le numéro du professeur écrit en rouge</li><li>Une gourde et un en-cas sucré</li><li>Un vêtement de pluie / coupe-vent</li></ul>\n";
 const GDEF = {name4A:'Florian',name4B:'Emeric',phone4A:'',phone4B:'',nameU:'Ulysse',phoneU:'',nameM:'Amin',phoneM:'',rally:'',alert:8,alertRed:12,pin:'1234',base:15,relayMode:'binomes'};
 const BEH = [
@@ -238,7 +257,7 @@ function state(cid,cls,u){
  if(c.type==='star'||c.type==='relay'){
   const legs=legsOf(r),res=new Set();let ok=0,err=0;
   for(const l of legs){if(l.ok){res.add(l.b);ok++}else if(l.skip)res.add(l.b);else if(l.ok===false)err++}
-  st.x=r.x||defX(cid,cls,u.id);st.next=seq(st.x,c.n).find(b=>!res.has(b));
+  st.order=orderOf(cid,cls,u,r)||seq(defX(cid,cls,u.id),c.n);st.x=st.order[0];st.next=st.order.find(b=>!res.has(b));
   Object.assign(st,{legs,ok,err,pts:ok,resolved:res.size,out:r.out||null});
   st.last=legs.filter(l=>!l.skip).slice(-1)[0];
   st.retry=st.next&&legs.some(l=>l.b===st.next&&l.ok===false);
@@ -272,7 +291,7 @@ const behEv=sid=>Object.entries(S.behav?.[sid]||{}).map(([k2,v])=>({k2,...v})).s
 const PROFS=()=>{const g=G();return [['4A',g.name4A],['4B',g.name4B],['U',g.nameU],['M',g.nameM]]};
 /* Florian et Emeric : tout. Ulysse et Amin : consultation + comportement uniquement */
 const RO=()=>UI.role==='prof'&&(UI.me==='U'||UI.me==='M');
-const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
+const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','reroll','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
 const RO_OFF=new Set(['pick','tpick']);
 const who=e=>{const b=String(e.by||'');return b.startsWith('prof')?b.slice(4):'?'};
 const profName=k=>(PROFS().find(p=>p[0]===k)||[,'?'])[1];
@@ -354,6 +373,9 @@ function vSuivi(cls){
  h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span><button data-a="unact" data-v="${cid}">↩ Annuler : retirer de la tablette</button>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
  ${c.type==='relay'&&g.relayMode==='binomes'?`<button data-a="goteams">👥 Composer les équipes de relais (${teams(cls).length})</button>`:''}
  ${(c.type==='vfm'||c.type==='score')&&all.some(s=>s.status==='idle')?`<button class="go" data-a="startall" data-c="${cid}">▶ Départ groupé</button>`:''}</div>`;
+ if((c.type==='star'||c.type==='relay')&&GEO[cid]){const cy=cycleOf(cid,cls),started=all.some(s=>s.r.start);
+  if(cy){const sp=splitM(cid,cy,2),tot=sp[0]+sp[1];h+=`<p class="small">🔀 <b>Ordre aléatoire</b>, différent pour chaque ${c.type==='relay'?'équipe':'binôme'}. Total ${km(tot)} par ${c.type==='relay'?'équipe':'binôme'}${c.type==='relay'?` · relayeur 1 : ${km(sp[0])}, relayeur 2 : ${km(sp[1])}`:''} (à vol d'oiseau, aller-retour). ${!started&&!RO()?`<button class="link" data-a="reroll" data-v="${cid}">nouveau tirage</button>`:''}</p>`}
+  else if(!RO())h+=`<p class="small">🔀 L'ordre aléatoire des balises sera tiré quand vous afficherez ce parcours sur la tablette.</p>`}
  if(RO())h+=`<p class="small" style="color:var(--acc);font-weight:600">✏️ Touchez un binôme pour noter le comportement de ses élèves.</p>`;
  if(alerts.length)h+=`<div class="banner">⚠ À surveiller : ${alerts.map(s=>s.u.label+' ('+names(s.u.m)+')').join(', ')}</div>`;
  if(!all.length)return h+`<p class="info">Aucun ${c.type==='relay'&&g.relayMode==='binomes'?'équipe de relais':'binôme'} pour la ${cls}. ${RO()?'Florian ou Emeric vont les créer.':`Créez-les dans l'onglet Binômes${c.type==='relay'?' (section Équipes de relais)':''}.`}</p>`;
@@ -527,7 +549,7 @@ function vModal(){const m=UI.modal;
  if(m.t==='unit'){const cid=m.c,u=unitsAll(cid,UI.cls).find(x=>x.id===m.v);if(!u)return `<button class="big" data-a="close">Fermer</button>`;const s=state(cid,UI.cls,u);
   return `<h3>${u.label} · ${C(cid).name}</h3>
   <div class="flex">${(s.r.m||u.m).map(sid=>`<button data-a="beh" data-v="${sid}">${esc(STU[sid].short)} <span class="note ${ncls(behNote(sid))}">${behNote(sid)}</span></button>`).join('')}</div>
-  <p>${line(s)}</p>${s.legs?`<div class="tw"><table><tr><th>Balise</th><th>Parti à</th><th>Durée</th><th>Code</th><th></th></tr>${s.legs.map(l=>`<tr><td>${l.b}</td><td>${l.d?hm(l.d):''}</td><td>${l.r?fmt(l.r-l.d):''}</td><td>${esc(l.code||'')}</td><td>${l.skip?'passée':l.ok?'✔':'✘'}${l.lbl?' '+esc(l.lbl):''}</td></tr>`).join('')}</table></div>`:''}
+  <p>${line(s)}</p>${s.order&&GEO[cid]?`<p class="small"><b>Ordre des balises :</b> ${s.order.map(b=>{const dn=s.legs.some(l=>l.b===b&&(l.ok||l.skip));return dn?`<s class="mut">${b}</s>`:b===s.next?`<b style="color:var(--acc)">${b}</b>`:b}).join(' → ')}<br>${u.runners&&u.runners.length>1?u.runners.map((rn,i)=>`${esc(rn.label)} : ${km(splitM(cid,s.order,u.runners.length)[i])}`).join(' · '):'Distance totale : '+km(splitM(cid,s.order,1)[0])}</p>`:''}${s.legs?`<div class="tw"><table><tr><th>Balise</th><th>Parti à</th><th>Durée</th><th>Code</th><th></th></tr>${s.legs.map(l=>`<tr><td>${l.b}</td><td>${l.d?hm(l.d):''}</td><td>${l.r?fmt(l.r-l.d):''}</td><td>${esc(l.code||'')}</td><td>${l.skip?'passée':l.ok?'✔':'✘'}${l.lbl?' '+esc(l.lbl):''}</td></tr>`).join('')}</table></div>`:''}
   ${(()=>{const d=`data-c="${cid}" data-v="${u.id}"`;let b='';
    if(s.status==='out'&&s.out)b+=`<button class="big" data-a="undo" ${d}>Annuler le départ en cours</button>`;
    if(s.status==='base'&&s.next)b+=`<button class="big" data-a="skip" ${d}>Passer la balise ${s.next}</button>`;
@@ -552,7 +574,7 @@ const A={
  at(d){UI.atab=d.v;saveUI();render()},
  pc(d){UI.pcourse=d.v;saveUI();render()},
  tt(d){UI.ttab=d.v;render()},
- setact(d){const cur=S.active?.[UI.cls];DB.update({['active/'+UI.cls]:d.v,['activePrev/'+UI.cls]:cur&&cur!==d.v?cur:null});toast(C(d.v).name+' affiché sur la tablette '+UI.cls)},
+ setact(d){const cur=S.active?.[UI.cls],ty=C(d.v).type;DB.update({['active/'+UI.cls]:d.v,['activePrev/'+UI.cls]:cur&&cur!==d.v?cur:null,...((ty==='star'||ty==='relay')&&!cycleOf(d.v,UI.cls)?{[`cycle/${d.v}/${UI.cls}`]:makeCycle(d.v,C(d.v).n)}:{})});toast(C(d.v).name+' affiché sur la tablette '+UI.cls)},
  only(){UI.only=!UI.only;render()},
  print(){print()},
  map(d){UI.modal={t:'map',v:d.v};render()},
@@ -581,7 +603,8 @@ const A={
   unitsAll(cid,cls).forEach(u=>{const r=R(cid,cls,u.id);if(r.start&&!r.finish){o[RP(cid,cls,u.id)+'/finish']=t;if(r.out)o[RP(cid,cls,u.id)+'/out']=null}});
   DB.update(o);toast('Fin sifflée 📣')})},
  unact(d){const cls=UI.cls,prev=S.activePrev?.[cls];ask(prev?`Remettre « ${C(prev).name} » sur la tablette ${cls} ?`:`Retirer ce parcours de la tablette ${cls} ? (elle affichera « En attente »)`,()=>{DB.update({['active/'+cls]:prev||null,['activePrev/'+cls]:null});toast(prev?C(prev).name+' remis sur la tablette':'Tablette en attente')})},
- resetcourse(d){const cls=UI.cls,c=C(d.v);ask(`Remettre « ${c.name} » à zéro pour la ${cls} ? Tous les chronos, balises et cartons de ce parcours seront effacés. Les binômes, équipes et notes de comportement sont conservés.`,()=>DB.update({[`runs/${d.v}/${cls}`]:null,[`clock/${cls}/${d.v}`]:null}))},
+ resetcourse(d){const cls=UI.cls,c=C(d.v);ask(`Remettre « ${c.name} » à zéro pour la ${cls} ? Tous les chronos, balises et cartons de ce parcours seront effacés. Les binômes, équipes et notes de comportement sont conservés.`,()=>DB.update({[`runs/${d.v}/${cls}`]:null,[`clock/${cls}/${d.v}`]:null,[`cycle/${d.v}/${cls}`]:null}))},
+ reroll(d){ask('Faire un nouveau tirage de l\'ordre des balises ?',()=>{DB.update({[`cycle/${d.v}/${UI.cls}`]:makeCycle(d.v,C(d.v).n)});toast('Nouvel ordre tiré')})},
  resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
@@ -603,7 +626,10 @@ const A={
  resetteams(){ask(`Supprimer toutes les équipes de relais de la ${UI.cls} ?`,()=>{UI.tsel=[];DB.update({['teams/'+UI.cls]:null})})},
  /* courses */
  dep(d){const cls=UI.cls,c=C(d.c),u=unitsAll(d.c,cls).find(x=>x.id===d.v),s=state(d.c,cls,u),p=RP(d.c,cls,d.v),t=now(),o={};
-  if(!s.r.start){o[p+'/start']=t;o[p+'/m']=u.m;if(s.x)o[p+'/x']=s.x}
+  if(!s.r.start){o[p+'/start']=t;o[p+'/m']=u.m;
+   if(c.type==='star'||c.type==='relay'){let ord=s.r.seq||(cycleOf(d.c,cls)?s.order:null);
+    if(!ord){const cy=makeCycle(d.c,c.n);o[`cycle/${d.c}/${cls}`]=cy;S.cycle=S.cycle||{};S.cycle[d.c]={...(S.cycle[d.c]||{}),[cls]:cy};ord=orderOf(d.c,cls,u,{})}
+    o[p+'/seq']=ord;s.next=ord.find(b=>!s.legs.some(l=>l.b===b&&(l.ok||l.skip)))}}
   if(c.type==='star'||c.type==='relay'){if(!s.next)return;o[p+'/out']={b:s.next,d:t,...(s.runner?{by:s.runner.id,lbl:s.runner.label}:{})}}
   DB.update(o)},
  startall(d){ask('Lancer le départ de tous les binômes pas encore partis ?',()=>{const cls=UI.cls,cid=d.c,t=now(),o={};
