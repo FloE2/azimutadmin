@@ -80,7 +80,10 @@ td.c,th.c{text-align:center}
 .kpd{font-size:2.6rem;text-align:center;font-weight:800;letter-spacing:6px;min-height:62px;border:2px solid var(--acc);border-radius:14px;background:var(--card);color:var(--acc)}
 .res{text-align:center;padding:34px 10px;font-size:1.7rem;font-weight:800;border-radius:16px}
 .res.ok{background:linear-gradient(135deg,#2f9e44,#69db7c);color:#fff}.res.ko{background:linear-gradient(135deg,#d6336c,#f783ac);color:#fff}
-.vfm{display:grid;grid-template-columns:40px repeat(3,1fr);gap:6px;align-items:center}
+.vfm{display:grid;grid-template-columns:26px 1fr 1fr 1.25fr 64px;gap:5px;align-items:center}
+.vfm button{padding:10px 2px;font-size:.82rem;font-weight:700;letter-spacing:.2px}
+.vfm button.v.on{background:#2f9e44;border-color:#2f9e44;color:#fff}.vfm button.f.on{background:#e8590c;border-color:#e8590c;color:#fff}.vfm button.m.on{background:#7048e8;border-color:#7048e8;color:#fff}
+.vfm input{width:100%;padding:9px 4px;text-align:center;font-weight:700}.vfm input:disabled{opacity:.35}
 .sc{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:12px;gap:0}
 .sc span{font-size:1.4rem;font-weight:800;line-height:1.2}.sc small{color:var(--mut);font-size:.75rem}
 .sc.ok{background:var(--okb);border-color:#2f9e44;color:var(--ok)}.sc.ko{background:var(--kob);border-color:var(--ko);color:var(--ko)}
@@ -143,7 +146,7 @@ const COURSES = {
   desc:"16 balises par équipe. Les relayeurs partent chacun leur tour : un part, l'autre attend à la base et récupère. Une seule balise par départ."},
  vfm:{short:'V/F/M',name:'Vrai Faux Manquant 2',type:'vfm',n:20,limit:45,penalty:1,verif:'code',
   key:'1:V, 2:F, 3:V, 4:F, 5:M, 6:V, 7:V, 8:V, 9:F, 10:V, 11:M, 12:F, 13:F, 14:M, 15:V, 16:M, 17:F, 18:M, 19:V, 20:F',
-  desc:"Circuit de 20 balises dans l'ordre. VRAI si la balise est au bon endroit (définition + centre du cercle), FAUX si elle est dans le cercle mais au mauvais endroit, rien si elle manque. 45 min max."},
+  desc:"Circuit de 20 balises dans l'ordre. VRAI + numéro si la balise est au bon endroit (définition + centre du cercle), FAUX + numéro si elle est dans le cercle mais mal placée de quelques mètres, MANQUANT s'il n'y a pas de balise (piège). 45 min max."},
  score:{short:'Score',name:'Course au score',type:'score',n:20,limit:45,penalty:5,ref:200,verif:'code',
   key:'1:31:20, 2:74:15, 3:63:5, 4:39:15, 5:34:20, 6:40:20, 7:64:5, 8:37:10, 9:48:10, 10:55:15, 11:68:15, 12:75:10, 13:46:5, 14:45:15, 15:73:15, 16:56:15, 17:38:20, 18:57:5, 19:66:20, 20:35:20',
   desc:"20 balises de 5 à 20 points, dans l'ordre que vous voulez. Départ groupé, 45 min. Chaque tranche de 30 s de retard coûte des points."}
@@ -224,7 +227,7 @@ const now=()=>Date.now()+DB.offset;
 
 /* ---------- réglages ---------- */
 const G=()=>({...GDEF,...(S.settings?.g||{})});
-function parseKey(t){const k={};String(t||'').split(/[,;\n]+/).forEach(p=>{const a=p.trim().split(/\s*[:=]\s*/);if(a.length>=2&&a[0])k[+a[0]]={c:norm(a[1]),p:a[2]?+a[2]:1}});return k}
+function parseKey(t){const k={};String(t||'').split(/[,;\n]+/).forEach(p=>{const a=p.trim().split(/\s*[:=]\s*/);if(a.length>=2&&a[0])k[+a[0]]={c:norm(a[1]),p:a[2]?+a[2]:1,x:a[2]?norm(a[2]):''}});return k}
 function C(id){const c={...COURSES[id],...(S.settings?.courses?.[id]||{})};c.id=id;c.K=parseKey(c.key);c.limit=+c.limit||45;c.penalty=+c.penalty||0;
  c.max=c.type==='score'?(+c.ref||200):c.n;c.total=c.type==='score'?Object.values(c.K).reduce((a,k)=>a+k.p,0):c.n;return c}
 
@@ -267,7 +270,7 @@ function state(cid,cls,u){
   st.status=r.finish?(r.valid?'done':'arrived'):r.start?'out':'idle';
   let pts=0,ok=0,err=0;
   if(r.valid)for(let i=1;i<=c.n;i++){const k=c.K[i];if(!k)continue;const a=norm(r.ans?.['q'+i]);
-   if(c.type==='vfm'){if((a||'M')===k.c){pts++;ok++}else err++}
+   if(c.type==='vfm'){const cd=norm(r.ans?.['c'+i]);if(a&&a===k.c&&(k.c==='M'||!k.x||cd===k.x)){pts++;ok++}else err++}
    else if(a==='OK'){pts+=k.p;ok++}else if(a==='KO')err++;else if(a){if(a===k.c){pts+=k.p;ok++}else err++}}
   Object.assign(st,{pts,ok,err});
  }
@@ -536,7 +539,7 @@ function vReg(){const g=G();const f=(k,l,t='text')=>`<label>${l}<input type="${t
   h+=`<h2>${c.name}</h2><div class="flex"><label>Temps limite (min)<input type="number" data-s="${p}limit" value="${c.limit}"></label><label>Points retirés / 30 s de retard<input type="number" data-s="${p}penalty" value="${c.penalty}"></label>
   ${c.type==='score'?`<label>Points pour 15/15 en réussite<input type="number" data-s="${p}ref" value="${c.ref}"></label>`:''}</div>
   ${c.type==='star'||c.type==='relay'?`<label>Vérification au retour<select data-s="${p}verif"><option value="code" ${c.verif==='code'?'selected':''}>Code écrit sur la balise (automatique)</option><option value="manuel" ${c.verif==='manuel'?'selected':''}>Manuelle : on compare le poinçon au corrigé</option></select></label>`:''}
-  <label>Corrigé (${c.type==='vfm'?'balise:V/F/M':c.type==='score'?'balise:code:points':'balise:code'}) — vérifiez-le avec votre feuille<textarea rows="3" data-s="${p}key">${esc(c.key)}</textarea></label>`});
+  <label>Corrigé (${c.type==='vfm'?'balise:V/F/M, ou balise:V:numéro pour vérifier aussi le numéro écrit':c.type==='score'?'balise:code:points':'balise:code'}) — vérifiez-le avec votre feuille<textarea rows="3" data-s="${p}key">${esc(c.key)}</textarea></label>`});
  return h+`</div>`}
 function vData(){const fb=CFG.fb?JSON.stringify(CFG.fb,null,1):'';
  return `<div class="form"><p>Mode actuel : <b>${DB.mode==='firebase'?'Firebase':'local'}</b> ${status()}</p>
@@ -554,8 +557,10 @@ function vModal(){const m=UI.modal;
   if(C(m.c).verif==='manuel')return `<h3>${m.label} revient de la balise ${m.b}</h3><p>Comparez le poinçon du carton avec le corrigé.</p><div class="flex"><button class="big okbtn" style="flex:1" data-a="manual" data-v="1">✔ Juste</button><button class="big kobtn" style="flex:1" data-a="manual" data-v="0">✘ Faux</button></div><button class="link" data-a="close">annuler</button>`;
   return `<h3>${m.label} revient de la balise ${m.b}</h3><p class="mut">Tapez le code écrit sur la balise.</p><div class="kpd">${esc(m.code)}</div>
   <div class="kp">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-a="k" data-v="${n}">${n}</button>`).join('')}<button data-a="k" data-v="del">⌫</button><button data-a="k" data-v="0">0</button><button class="okbtn" data-a="k" data-v="ok">✔</button></div><button class="link" data-a="close">annuler</button>`}
- if(m.t==='vfm'){let h=`<h3>${m.label} · carton Vrai/Faux/Manquant</h3><p class="small mut">Recopiez le carton : VRAI si poinçonné dans la case VRAI, FAUX si dans la case FAUX. Laissez « rien » si aucun poinçon. ${Object.values(m.ans).filter(v=>v==='V'||v==='F').length} poinçon(s) saisi(s).</p><div class="vfm">`;
-  for(let i=1;i<=20;i++){const a=m.ans['q'+i]||'M';h+=`<b>${i}</b>${[['V','VRAI'],['F','FAUX'],['M','rien']].map(([v,l])=>`<button class="${a===v?'on':''}" data-a="vf" data-q="${i}" data-v="${v}">${l}</button>`).join('')}`}
+ if(m.t==='vfm'){const K=C('vfm').K,nb=Object.keys(m.ans).filter(k=>k[0]==='q'&&m.ans[k]).length;
+  let h=`<h3>${m.label} · carton Vrai / Faux / Manquant</h3><p class="small mut">Pour chaque poste, recopiez la réponse du carton : <b>VRAI</b> ou <b>FAUX</b> + le numéro écrit sur la balise, ou <b>MANQUANT</b> (pas de balise, c'est le piège). Laissez vide si le poste n'a pas été fait. <b>${nb}/20</b> postes saisis.</p><div class="vfm">`;
+  for(let i=1;i<=20;i++){const a=m.ans['q'+i]||'',cd=m.ans['c'+i]||'';
+   h+=`<b>${i}</b>${[['V','VRAI','v'],['F','FAUX','f'],['M','MANQUANT','m']].map(([v,l,cl])=>`<button class="${cl} ${a===v?'on':''}" data-a="vf" data-q="${i}" data-v="${v}">${l}</button>`).join('')}<input inputmode="numeric" placeholder="n°" data-vc="${i}" value="${esc(cd)}" ${a==='V'||a==='F'?'':'disabled'}>`}
   return h+`</div><button class="big okbtn" data-a="savesheet">Valider le carton</button><button class="link" data-a="close">annuler</button>`}
  if(m.t==='score'){const K=C('score').K;let tot=0,n=0;
   const st=i=>{const a=norm(m.ans['q'+i]);if(a==='OK')return 'ok';if(a==='KO')return 'ko';if(a)return a===K[i]?.c?'ok':'ko';return ''};
@@ -669,9 +674,10 @@ const A={
  fin(d){ask('Arrêter le chrono de cette équipe ?',()=>{UI.modal=null;const p=RP(d.c,UI.cls,d.v);DB.update({[p+'/finish']:now(),[p+'/out']:null})})},
  arr(d){DB.update({[RP(d.c,UI.cls,d.v)+'/finish']:now()});toast('Arrivée enregistrée : donnez votre carton au prof')},
  sheet(d){const u=unitsAll(d.c,UI.cls).find(x=>x.id===d.v);if(UI.role==='prof')DB.update({[RP(d.c,UI.cls,d.v)+'/ed']:{w:profName(UI.me||UI.cls),t:now()}});UI.modal={t:C(d.c).type,c:d.c,v:d.v,label:u.label,ans:{...(R(d.c,UI.cls,d.v).ans||{})}};render()},
- vf(d){UI.modal.ans['q'+d.q]=d.v;render()},
+ vf(d){const a=UI.modal.ans;document.querySelectorAll('#modal input[data-vc]').forEach(x=>{if(x.value.trim())a['c'+x.dataset.vc]=x.value.trim();else delete a['c'+x.dataset.vc]});
+  if(a['q'+d.q]===d.v)delete a['q'+d.q];else a['q'+d.q]=d.v;if(d.v==='M')delete a['c'+d.q];render();if(d.v!=='M'&&a['q'+d.q])setTimeout(()=>document.querySelector(`#modal input[data-vc="${d.q}"]`)?.focus(),30)},
  sc(d){const a=UI.modal.ans,k='q'+d.q,v=a[k];if(!v||(v!=='OK'&&v!=='KO'))a[k]='OK';else if(v==='OK')a[k]='KO';else delete a[k];render()},
- savesheet(){const m=UI.modal;
+ savesheet(){const m=UI.modal;if(m.t==='vfm')document.querySelectorAll('#modal input[data-vc]').forEach(x=>{const v=x.value.trim();if(v&&(m.ans['q'+x.dataset.vc]==='V'||m.ans['q'+x.dataset.vc]==='F'))m.ans['c'+x.dataset.vc]=v;else delete m.ans['c'+x.dataset.vc]});
   const p=RP(m.c,UI.cls,m.v);DB.update({[p+'/ans']:Object.keys(m.ans).length?m.ans:null,[p+'/valid']:true,[p+'/ed']:null,[p+'/vby']:UI.role==='prof'?profName(UI.me||UI.cls):'tablette'});UI.modal=null;
   const u=unitsAll(m.c,UI.cls).find(x=>x.id===m.v);const s=state(m.c,UI.cls,u);toast(`${u.label} : ${s.final} pts`);render()},
  unit(d){UI.modal={t:'unit',c:curCourse(UI.cls,'pcourse'),v:d.v};render()},
@@ -702,6 +708,7 @@ function dl(name,txt,type){const a=document.createElement('a');a.href=URL.create
 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;if(el.id==='modal')return;const f=A[el.dataset.a];if(f){e.preventDefault();if(RO()&&RO_HIDE.has(el.dataset.a))return toast('Réservé à Florian et Emeric');f(el.dataset,el)}});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&UI.modal&&UI.modal.t!=='kp'){UI.modal=null;render()}});
+document.addEventListener('input',e=>{const x=e.target;if(x.dataset&&x.dataset.vc&&UI.modal&&UI.modal.ans){const v=x.value.trim();if(v)UI.modal.ans['c'+x.dataset.vc]=v;else delete UI.modal.ans['c'+x.dataset.vc]}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='newmat'){e.preventDefault();A.addmat()}});
 document.addEventListener('change',e=>{const el=e.target;if(RO()&&(el.dataset.f||el.dataset.s)){render();return toast('Réservé à Florian et Emeric')}
  if(el.dataset.f)DB.update({[el.dataset.f]:el.checked?true:null});
