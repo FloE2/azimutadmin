@@ -298,7 +298,7 @@ const behEv=sid=>Object.entries(S.behav?.[sid]||{}).map(([k2,v])=>({k2,...v})).s
 const PROFS=()=>{const g=G();return [['4A',g.name4A],['4B',g.name4B],['U',g.nameU],['M',g.nameM]]};
 /* Florian et Emeric : tout. Ulysse et Amin : consultation + comportement uniquement */
 const RO=()=>UI.role==='prof'&&(UI.me==='U'||UI.me==='M');
-const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','reroll','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
+const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','reroll','zero','zdo','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
 const RO_OFF=new Set(['pick','tpick']);
 const who=e=>{const b=String(e.by||'');return b.startsWith('prof')?b.slice(4):'?'};
 const profName=k=>(PROFS().find(p=>p[0]===k)||[,'?'])[1];
@@ -373,9 +373,9 @@ function vSuivi(cls){
  const alerts=all.filter(s=>(s.out&&now()-s.out.d>g.alertRed*60000)||(s.r.start&&!s.r.finish&&s.late>0));
  let h=`${courseSeg(cls,'pcourse')}<p class="small mut">● = carte ouverte sur la tablette. Limite ${c.limit} min · pénalité ${c.penalty} pt / 30 s de retard. <button class="link" data-a="map" data-v="${cid}">Voir la carte</button></p>`;
  h+=clockBar(cls,cid,true);
- if(c.type==='vfm'||c.type==='score'){const pend=all.filter(s=>s.status==='arrived').sort((a,b)=>a.r.finish-b.r.finish);
-  if(pend.length)h+=`<div class="pendbox"><b>📋 Cartons à valider (${pend.length})</b> <span class="small">dans l'ordre d'arrivée · le chrono est déjà arrêté</span><div class="grid" style="margin-top:8px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${pend.map(s=>{const ed=s.r.ed&&now()-s.r.ed.t<180000&&s.r.ed.w!==profName(UI.me||cls)?s.r.ed.w:'';
-   return `<button class="back" style="text-align:left;padding:12px" data-a="sheet" data-c="${cid}" data-v="${s.u.id}"><b>✎ ${s.u.label}</b> ${esc(names(s.r.m||s.u.m))}<br><span class="small">arrivé à ${hm(s.r.finish)} · ${fmt(s.elapsed)}${ed?' · ✏️ '+esc(ed)+' saisit…':''}</span></button>`}).join('')}</div></div>`}
+ if(c.type==='vfm'||c.type==='score'){const me=profName(UI.me||cls),busy=s=>s.r.ed&&now()-s.r.ed.t<180000&&s.r.ed.w!==me;const pend=all.filter(s=>s.status==='arrived').sort((a,b)=>(busy(a)-busy(b))||a.r.finish-b.r.finish);
+  if(pend.length)h+=`<div class="pendbox"><b>📋 Cartons à valider (${pend.length})</b> <span class="small">dans l'ordre d'arrivée · le chrono est déjà arrêté · à plusieurs : prenez le premier carton en couleur, ceux en gris sont déjà en cours de saisie par un collègue</span><div class="grid" style="margin-top:8px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${pend.map(s=>{const ed=s.r.ed&&now()-s.r.ed.t<180000&&s.r.ed.w!==profName(UI.me||cls)?s.r.ed.w:'';
+   return `<button class="back" style="text-align:left;padding:12px;${ed?'opacity:.45;filter:grayscale(.6)':''}" data-a="sheet" data-c="${cid}" data-v="${s.u.id}"><b>✎ ${s.u.label}</b> ${esc(names(s.r.m||s.u.m))}<br><span class="small">arrivé à ${hm(s.r.finish)} · ${fmt(s.elapsed)}${ed?' · ✏️ '+esc(ed)+' saisit…':''}</span></button>`}).join('')}</div></div>`}
  if(c.type==='vfm'||c.type==='score')h+=`<p class="small mut">Les élèves appuient sur « Arrivée » sur la tablette (le chrono s'arrête), puis vous remettent le carton. Validez-le ici.</p>`;
  h+=`<div class="flex" style="margin-bottom:10px">${S.active?.[cls]===cid?`<span class="pill ok">✔ Ce parcours est affiché sur la tablette ${cls}</span><button data-a="unact" data-v="${cid}">↩ Annuler : retirer de la tablette</button>`:`<button class="go" data-a="setact" data-v="${cid}">📋 Afficher ce parcours sur la tablette ${cls}</button>`}
  ${c.type==='relay'&&g.relayMode==='binomes'?`<button data-a="goteams">👥 Composer les équipes de relais (${teams(cls).length})</button>`:''}
@@ -547,7 +547,7 @@ function vData(){const fb=CFG.fb?JSON.stringify(CFG.fb,null,1):'';
  <label>Code de session (le même sur les 4 appareils)<input id="sess" value="${esc(SESSION)}"></label>
  <button class="go" data-a="savecfg">Enregistrer et recharger</button>
  <h2>Sauvegarde</h2><div class="flex"><button data-a="backup">⬇ Télécharger toutes les données (JSON)</button></div>
- <h2>Après la sortie</h2><p class="small mut">Efface binômes, courses, comportements, feuilles de cette session (sur tous les appareils).</p>
+ <h2>Après la sortie</h2><p class="small mut">Efface les binômes, les équipes, les résultats des parcours et les notes de comportement (sur tous les appareils). <b>Conserve</b> l'appel (absents), les feuilles de sortie et de droit à l'image, les réglages et le matériel.</p>
  <div class="flex"><input id="wipe" placeholder="tapez EFFACER"><button class="kobtn" data-a="wipe">Effacer</button></div></div>`}
 
 /* ---------- fenêtres ---------- */
@@ -589,6 +589,13 @@ function vModal(){const m=UI.modal;
    return b})()}
   <button class="big" data-a="close">Fermer</button>`}
  if(m.t==='map')return `<h3>${C(m.v).name}</h3><img class="mapimg" src="${MAPS[m.v]}" alt="Carte"><button class="big" data-a="close">Fermer</button>`;
+ if(m.t==='zero'){const c=UI.cls,o=c==='4A'?'4B':'4A';const opt=(v,t,d)=>`<button class="big" style="text-align:left" data-a="zdo" data-v="${v}"><b>${t}</b><div class="small mut" style="font-weight:400">${d}</div></button>`;
+  return `<h3>⟲ Remise à zéro</h3><p class="small mut">Les binômes, les équipes de relais, les feuilles de sortie, les absents, les réglages et le matériel sont <b>toujours conservés</b>.</p>
+  ${opt('beh-'+c,'Comportement '+c,'Efface toutes les notes de comportement de la '+c+' (tous les adultes).')}
+  ${opt('co-'+c,'Résultats CO '+c,'Efface chronos, balises, cartons et tirages des 4 parcours de la '+c+'.')}
+  ${opt('all-'+c,'Tout pour la '+c,'Comportement + résultats CO de la '+c+'.')}
+  ${opt('all-both','Tout pour la 4A et la 4B','Repartir d\'une journée vierge (ex. après les essais).')}
+  <button class="link" data-a="close">annuler</button>`}
  if(m.t==='pin')return `<h3>Quitter le mode tablette</h3><input id="pin" type="password" inputmode="numeric" placeholder="code" style="width:100%;font-size:1.4rem"><button class="big go" data-a="unlock">Valider</button><button class="link" data-a="close">annuler</button>`;
  if(m.t==='confirm')return `<h3>${esc(m.msg)}</h3><div class="flex"><button class="big kobtn" style="flex:1" data-a="yes">Oui</button><button class="big" style="flex:1" data-a="close">Non</button></div>`;
  return '';
@@ -636,6 +643,13 @@ const A={
  resetcourse(d){const cls=UI.cls,c=C(d.v);ask(`Remettre « ${c.name} » à zéro pour la ${cls} ? Tous les chronos, balises et cartons de ce parcours seront effacés. Les binômes, équipes et notes de comportement sont conservés.`,()=>DB.update({[`runs/${d.v}/${cls}`]:null,[`clock/${cls}/${d.v}`]:null,[`cycle/${d.v}/${cls}`]:null}))},
  reroll(d){ask('Faire un nouveau tirage de l\'ordre des balises ?',()=>{DB.update({[`cycle/${d.v}/${UI.cls}`]:makeCycle(d.v,C(d.v).n)});toast('Nouvel ordre tiré')})},
  gs(d){UI.gscope=d.v==='both'?'both':'cls';render()},
+ zero(){UI.modal={t:'zero'};render()},
+ zdo(d){const [k,c]=d.v.split('-'),cls=c==='both'?['4A','4B']:[c];
+  const lbl={beh:'les notes de comportement',co:'les résultats des parcours',all:'le comportement ET les résultats'}[k];
+  ask(`Effacer ${lbl} de la ${cls.join(' et la ')} ? C'est définitif pour les 4 téléphones.`,()=>{const o={};
+   cls.forEach(x=>{if(k!=='co')clsStu(x).forEach(s=>o['behav/'+s.id]=null);
+    if(k!=='beh'){ORDER.forEach(cid=>{o[`runs/${cid}/${x}`]=null;o[`cycle/${cid}/${x}`]=null});o['clock/'+x]=null;o['active/'+x]=null;o['activePrev/'+x]=null}});
+   DB.update(o);toast('Remise à zéro effectuée')})},
  resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
@@ -692,7 +706,7 @@ const A={
  backup(){dl('azimut-sauvegarde.json',JSON.stringify(S,null,1),'application/json')},
  savecfg(){const t=$('#fbcfg');let fb=CFG.fb;if(t){const v=t.value.trim();if(!v)fb=null;else{try{fb=parseCfg(v)}catch(e){return toast('Config illisible')}}}
   LS.set('co-cfg',{fb,session:($('#sess').value.trim()||DEFAULT_SESSION).replace(/[.#$\[\]\/]/g,'-')});location.reload()},
- wipe(){if($('#wipe').value!=='EFFACER')return toast('Tapez EFFACER');DB.update({binomes:null,teams:null,runs:null,behav:null,forms:null,absent:null,active:null});toast('Données effacées')},
+ wipe(){if($('#wipe').value!=='EFFACER')return toast('Tapez EFFACER');DB.update({binomes:null,teams:null,runs:null,behav:null,active:null,activePrev:null,clock:null,cycle:null});toast('Données effacées')},
 };
 function confirmSolo(){toast('Choisissez au moins 2 élèves');return false}
 function nextTN(cls){return Math.max(0,...teams(cls).map(t=>t.n))+1}
