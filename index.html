@@ -663,10 +663,10 @@ const A={
   const f=s=>S.forms?.[s.id]||{},row=s=>`<tr><td>${esc(s.nom)}</td><td>${esc(s.prenom)}</td></tr>`;
   let h=`<div class="head"><h1>Dossiers incomplets – Sortie Azimut, Parc de Sceaux</h1><p class="sub" style="margin:0">Course d'orientation · <b>lundi 9 novembre 2026</b> · classes de 4A et 4B</p></div>
   <p>À l'attention du CPE. Liste arrêtée le ${today} à ${hm(Date.now())}.</p>`;
-  for(const cls in STUDENTS){const L=clsStu(cls),noS=L.filter(s=>!f(s).s),noI=L.filter(s=>f(s).s&&!f(s).i),ab=L.filter(s=>absent(s.id));
+  for(const cls in STUDENTS){const L=clsStu(cls),noS=L.filter(s=>!f(s).s),noI=L.filter(s=>!f(s).i),ab=L.filter(s=>absent(s.id));
    h+=`<h2>${cls} — ${noS.length} élève${noS.length>1?'s':''} ne pourr${noS.length>1?'ont':'a'} pas partir</h2>
    <h3>Feuille d'autorisation de sortie non rendue : l'élève ne peut pas partir (${noS.length})</h3>${noS.length?`<table><tr><th>Nom</th><th>Prénom</th></tr>${noS.map(row).join('')}</table>`:'<p class="none">Aucun : toutes les feuilles de sortie sont rendues.</p>'}
-   <h3>Droit à l'image non rendu : l'élève part, mais ne doit pas être pris en photo (${noI.length})</h3>${noI.length?`<table><tr><th>Nom</th><th>Prénom</th></tr>${noI.map(row).join('')}</table>`:'<p class="none">Aucun.</p>'}
+   <h3>Autorisation de droit à l'image non rendue (${noI.length})</h3>${noI.length?`<table><tr><th>Nom</th><th>Prénom</th><th>Remarque</th></tr>${noI.map(s=>`<tr><td>${esc(s.nom)}</td><td>${esc(s.prenom)}</td><td>${f(s).s?'part à la sortie : ne pas photographier':'ne part pas (feuille de sortie non rendue)'}</td></tr>`).join('')}</table>`:'<p class="none">Aucun : toutes les autorisations de droit à l\'image sont rendues.</p>'}
    ${ab.length?`<h3>Signalés absents le 9/11 (${ab.length})</h3><table><tr><th>Nom</th><th>Prénom</th></tr>${ab.map(row).join('')}</table>`:''}`}
   h+=`<p class="foot">Professeurs d'EPS : ${esc(g.name4A)} (4A) et ${esc(g.name4B)} (4B).</p>`;
   $('#printdoc').innerHTML=h;const t=document.title;document.title='Dossiers incomplets - Sortie Azimut Parc de Sceaux - 9 novembre 2026';document.body.classList.add('printcpe');
@@ -736,8 +736,8 @@ function cpeMail(){const g=G(),me=UI.me==='4B'?'4B':'4A',from=g['mail'+me],to=g.
  const f=s=>S.forms?.[s.id]||{},L=a=>a.length?a.map(s=>'  - '+s.nom+' '+s.prenom).join('\n'):'  (aucun)';
  const today=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' à '+hm(Date.now());
  let b=`Bonjour,\n\nVoici la liste des dossiers incomplets pour la sortie Azimut (course d'orientation) au Parc de Sceaux, le lundi 9 novembre 2026, classes de 4A et 4B.\nListe arrêtée le ${today}.\n`;
- for(const cls in STUDENTS){const A2=clsStu(cls),noS=A2.filter(s=>!f(s).s),noI=A2.filter(s=>f(s).s&&!f(s).i),ab=A2.filter(s=>absent(s.id));
-  b+=`\n== ${cls} ==\nFeuille de sortie non rendue, l'élève ne peut pas partir (${noS.length}) :\n${L(noS)}\nDroit à l'image non rendu, l'élève part mais ne doit pas être photographié (${noI.length}) :\n${L(noI)}\n`+(ab.length?`Signalés absents (${ab.length}) :\n${L(ab)}\n`:'')}
+ for(const cls in STUDENTS){const A2=clsStu(cls),noS=A2.filter(s=>!f(s).s),noI=A2.filter(s=>!f(s).i),ab=A2.filter(s=>absent(s.id));
+  b+=`\n== ${cls} ==\nFeuille de sortie non rendue, l'élève ne peut pas partir (${noS.length}) :\n${L(noS)}\nAutorisation de droit à l'image non rendue (${noI.length}) :\n${noI.length?noI.map(s=>'  - '+s.nom+' '+s.prenom+(f(s).s?' (part à la sortie : ne pas photographier)':' (ne part pas)')).join('\n'):'  (aucun)'}\n`+(ab.length?`Signalés absents (${ab.length}) :\n${L(ab)}\n`:'')}
  b+=`\nBien cordialement,\n${g['name'+me]}\nProfesseur d'EPS`;
  return {from,to,su:"Dossiers incomplets - Sortie Azimut Parc de Sceaux - lundi 9 novembre 2026",body:b}}
 function confirmSolo(){toast('Choisissez au moins 2 élèves');return false}
