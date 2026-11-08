@@ -113,9 +113,18 @@ td.c,th.c{text-align:center}
 .pendbox{background:var(--acc2);border:2px solid #ff922b;border-radius:14px;padding:12px;margin-bottom:12px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--forest);color:#fff;padding:11px 18px;border-radius:12px;z-index:30;opacity:0;transition:.2s;pointer-events:none;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #toast.show{opacity:1}
-@media print{.top,.noprint{display:none}main{padding:0}body{background:#fff}}
+#printdoc{display:none}
+@media print{.top,.noprint{display:none}main{padding:0}body{background:#fff}
+ body.printcpe>*{display:none!important}body.printcpe #printdoc{display:block!important;color:#000;font:12pt/1.4 -apple-system,"Segoe UI",Arial,sans-serif}
+ #printdoc h1{font-size:18pt;margin:0 0 2pt}#printdoc .sub{font-size:12pt;margin:0 0 10pt;color:#333}
+ #printdoc h2{font-size:13pt;margin:14pt 0 4pt;border-bottom:1.5pt solid #000;padding-bottom:2pt}#printdoc h2::before{display:none}
+ #printdoc h3{font-size:11.5pt;margin:8pt 0 3pt}#printdoc table{min-width:0;width:100%;border-collapse:collapse;box-shadow:none}
+ #printdoc th,#printdoc td{border:1px solid #999;padding:4pt 6pt;text-align:left;background:#fff!important;color:#000;font-size:11pt;text-transform:none;letter-spacing:0}
+ #printdoc th{background:#eee!important}#printdoc .none{font-style:italic;color:#444}#printdoc .foot{margin-top:18pt;font-size:10pt;color:#333}
+ #printdoc .head{border:2pt solid #000;padding:8pt 10pt;margin-bottom:10pt}
+ @page{margin:14mm}}
 </style></head><body>
-<div id="app"></div><div id="modal"></div><div id="toast"></div>
+<div id="app"></div><div id="modal"></div><div id="toast"></div><div id="printdoc"></div>
 <script>
 /* ============ À CONFIGURER ============
    Collez ici la config de votre projet Firebase (Console Firebase > Paramètres du projet > Vos applications > Web).
@@ -298,7 +307,7 @@ const behEv=sid=>Object.entries(S.behav?.[sid]||{}).map(([k2,v])=>({k2,...v})).s
 const PROFS=()=>{const g=G();return [['4A',g.name4A],['4B',g.name4B],['U',g.nameU],['M',g.nameM]]};
 /* Florian et Emeric : tout. Ulysse et Amin : consultation + comportement uniquement */
 const RO=()=>UI.role==='prof'&&(UI.me==='U'||UI.me==='M');
-const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','reroll','zero','zdo','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
+const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','reroll','zero','zdo','cpe','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
 const RO_OFF=new Set(['pick','tpick']);
 const who=e=>{const b=String(e.by||'');return b.startsWith('prof')?b.slice(4):'?'};
 const profName=k=>(PROFS().find(p=>p[0]===k)||[,'?'])[1];
@@ -524,7 +533,7 @@ function tabCard(s,cid){const c=s.c,id=s.u.id,d=`data-c="${cid}" data-v="${id}"`
 function vAdminBody(){return UI.atab==='reg'?vReg():UI.atab==='data'?vData():vForms()}
 function vAdmin(){const b=vAdminBody();
  return `<div class="top"><button data-a="home">⌂</button><h1>Admin</h1>${status()}<div style="width:100%">${seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')}</div></div><main>${b}</main>`}
-function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on':''}" data-a="only">${UI.only?'✔ ':''}Seulement les dossiers incomplets</button><button data-a="print">Imprimer</button></div>`;
+function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on':''}" data-a="only">${UI.only?'✔ ':''}Seulement les dossiers incomplets</button><button data-a="print">Imprimer</button>${RO()?'':'<button class="go" data-a="cpe">📄 PDF dossiers incomplets (CPE)</button>'}</div>`;
  for(const cls in STUDENTS){const L=clsStu(cls),f=s=>S.forms?.[s.id]||{};
   h+=`<h2>${cls} <span class="small mut">— sortie ${L.filter(s=>f(s).s).length}/${L.length} · droit à l'image ${L.filter(s=>f(s).i).length}/${L.length} · absents ${L.filter(s=>absent(s.id)).length}</span></h2>
   <div class="tw"><table><tr><th>Élève</th><th class="c">Feuille sortie</th><th class="c">Droit à l'image</th><th class="c">Absent le 9/11</th></tr>
@@ -650,6 +659,18 @@ const A={
    cls.forEach(x=>{if(k!=='co')clsStu(x).forEach(s=>o['behav/'+s.id]=null);
     if(k!=='beh'){ORDER.forEach(cid=>{o[`runs/${cid}/${x}`]=null;o[`cycle/${cid}/${x}`]=null});o['clock/'+x]=null;o['active/'+x]=null;o['activePrev/'+x]=null}});
    DB.update(o);toast('Remise à zéro effectuée')})},
+ cpe(){const today=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),g=G();
+  const f=s=>S.forms?.[s.id]||{},row=s=>`<tr><td>${esc(s.nom)}</td><td>${esc(s.prenom)}</td></tr>`;
+  let h=`<div class="head"><h1>Dossiers incomplets – Sortie Azimut, Parc de Sceaux</h1><p class="sub" style="margin:0">Course d'orientation · <b>lundi 9 novembre 2026</b> · classes de 4A et 4B</p></div>
+  <p>À l'attention du CPE. Liste arrêtée le ${today} à ${hm(Date.now())}.</p>`;
+  for(const cls in STUDENTS){const L=clsStu(cls),noS=L.filter(s=>!f(s).s),noI=L.filter(s=>f(s).s&&!f(s).i),ab=L.filter(s=>absent(s.id));
+   h+=`<h2>${cls} — ${noS.length} élève${noS.length>1?'s':''} ne pourr${noS.length>1?'ont':'a'} pas partir</h2>
+   <h3>Feuille d'autorisation de sortie non rendue : l'élève ne peut pas partir (${noS.length})</h3>${noS.length?`<table><tr><th>Nom</th><th>Prénom</th></tr>${noS.map(row).join('')}</table>`:'<p class="none">Aucun : toutes les feuilles de sortie sont rendues.</p>'}
+   <h3>Droit à l'image non rendu : l'élève part, mais ne doit pas être pris en photo (${noI.length})</h3>${noI.length?`<table><tr><th>Nom</th><th>Prénom</th></tr>${noI.map(row).join('')}</table>`:'<p class="none">Aucun.</p>'}
+   ${ab.length?`<h3>Signalés absents le 9/11 (${ab.length})</h3><table><tr><th>Nom</th><th>Prénom</th></tr>${ab.map(row).join('')}</table>`:''}`}
+  h+=`<p class="foot">Professeurs d'EPS : ${esc(g.name4A)} (4A) et ${esc(g.name4B)} (4B).</p>`;
+  $('#printdoc').innerHTML=h;const t=document.title;document.title='Dossiers incomplets - Sortie Azimut Parc de Sceaux - 9 novembre 2026';document.body.classList.add('printcpe');
+  const done=()=>{document.body.classList.remove('printcpe');document.title=t;removeEventListener('afterprint',done)};addEventListener('afterprint',done);setTimeout(()=>print(),50)},
  resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
