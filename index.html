@@ -181,7 +181,7 @@ function orderOf(cid,cls,u,r){if(r.seq)return r.seq;if(r.x)return seq(r.x,C(cid)
 function splitM(cid,ord,k){const t=Array(k).fill(0);ord.forEach((b,i)=>t[i%k]+=legM(cid,b));return t}
 const km=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':m+' m';
 const SECU = "<h3>👥 La règle d'or : le binôme indissociable</h3>\n<p>Vous restez avec votre partenaire du début à la fin. Interdiction absolue de vous séparer, même pour aller chercher une balise « plus vite » ou aller aux toilettes. Vous partez ensemble, vous cherchez ensemble, vous rentrez ensemble.</p>\n<h3>🎒 Ce que vous emportez… et ce qui reste au départ</h3>\n<ul><li><b>Vous partez avec :</b> votre carton de contrôle, un stylo, un chrono (ou une montre) et la carte dans sa pochette.</li>\n<li><b>Les sacs à dos restent au point de départ</b>, sous la surveillance du professeur.</li>\n<li><b>Téléphones portables interdits</b> pendant les courses : ils restent dans le sac.</li></ul>\n<h3>🛑 Les limites du terrain</h3>\n<ul><li><b>Les barrières du parc :</b> ne franchissez jamais les grilles ou les sorties du parc. Tout le jeu se déroule à l'intérieur.</li>\n<li><b>Les zones d'eau :</b> interdiction d'approcher à moins de 5 mètres du Grand Canal, des bassins (Octogone, Aurore) et des cascades. On ne court pas sur les pontons.</li>\n<li><b>Les zones interdites :</b> espaces clos, chantiers, château (sauf consigne), parterres de fleurs interdits au public.</li></ul>\n<h3>🏃 Comportement et sécurité</h3>\n<ul><li><b>Attention aux autres :</b> le parc est ouvert au public. Ne bousculez pas les promeneurs, les jeunes enfants ou les personnes âgées. Attention aux vélos sur les grandes allées.</li>\n<li><b>Le chrono :</b> surveillez le temps. L'heure de retour au point de départ n'est pas négociable. Tout retard entraîne une pénalité ou l'arrêt de la course.</li>\n<li><b>Respect de la nature :</b> ne grimpez pas aux arbres, ne traversez pas les buissons denses.</li></ul>\n<h3>🚨 Si ton partenaire se blesse</h3>\n<ol><li><b>Ne le laisse jamais seul.</b> Tu restes avec lui, quoi qu'il arrive.</li>\n<li><b>Mets-le en sécurité :</b> assis ou allongé, à l'abri du passage.</li>\n<li><b>Fais prévenir les professeurs :</b> appelle à l'aide le premier binôme ou le premier adulte qui passe (promeneur, agent du parc) et demande-lui d'aller au point de départ prévenir un professeur.</li>\n<li><b>Donne votre position exacte :</b> le numéro de la balise la plus proche ou un repère (« près du bassin de l'Octogone », « allée des Platanes, balise 12 »).</li>\n<li><b>Restez sur place</b> et faites-vous voir jusqu'à l'arrivée d'un adulte.</li></ol>\n<p><b>Tu vois un binôme en difficulté ?</b> Tu t'arrêtes, et vous allez <b>à deux</b> prévenir un professeur au point de départ.</p>\n<h3>🧭 Si vous êtes perdus</h3>\n<ol><li><b>Arrêtez de courir au hasard.</b> Repérez un point haut (le Château, le Grand Canal).</li>\n<li><b>Rejoignez une grande allée</b> en marchant calmement : vous y croiserez un professeur, un adulte ou la sécurité du parc.</li>\n<li><b>Temps limite dépassé :</b> restez visibles sur une grande allée et demandez à un adulte ou à un autre binôme de prévenir les professeurs. Les adultes viendront vous chercher.</li></ol>\n";
-const GDEF = {name4A:'Florian',name4B:'Emeric',phone4A:'',phone4B:'',nameU:'Ulysse',phoneU:'',nameM:'Amin',phoneM:'',rally:'',alert:8,alertRed:12,pin:'1234',base:15,relayMode:'binomes'};
+const GDEF = {name4A:'Florian',name4B:'Emeric',phone4A:'',phone4B:'',nameU:'Ulysse',phoneU:'',nameM:'Amin',phoneM:'',mail4A:'florianeude@gmail.com',mail4B:'cosperecemeric@gmail.com',mailCPE:'jean-richard.deston@ac-versailles.fr',rally:'',alert:8,alertRed:12,pin:'1234',base:15,relayMode:'binomes'};
 const BEH = [
  ['p1','Respecte les consignes',1],['p2','Reste avec son binôme',1],['p3','Entraide, fair-play',1],['p4','Très investi(e)',1],
  ['p5','Calme, respecte le public',1],['p6','Ponctuel(le) au retour',1],['p7','Soin du matériel',1],['p8','Leader positif',2],
@@ -307,7 +307,7 @@ const behEv=sid=>Object.entries(S.behav?.[sid]||{}).map(([k2,v])=>({k2,...v})).s
 const PROFS=()=>{const g=G();return [['4A',g.name4A],['4B',g.name4B],['U',g.nameU],['M',g.nameM]]};
 /* Florian et Emeric : tout. Ulysse et Amin : consultation + comportement uniquement */
 const RO=()=>UI.role==='prof'&&(UI.me==='U'||UI.me==='M');
-const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','reroll','zero','zdo','cpe','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
+const RO_HIDE=new Set(['setact','unact','goteams','mkteams','mkteam','tunsel','delteam','resetteams','startall','clockgo','whistle','clockreset','resetcourse','reroll','zero','zdo','cpe','cpemail','cpemailto','dep','ret','undo','skip','fin','arr','resetrun','absmode','autob','mkb','unsel','delb','resetb','swap','repl','addto','rmfrom','addmat','delmat','wipe','savecfg']);
 const RO_OFF=new Set(['pick','tpick']);
 const who=e=>{const b=String(e.by||'');return b.startsWith('prof')?b.slice(4):'?'};
 const profName=k=>(PROFS().find(p=>p[0]===k)||[,'?'])[1];
@@ -533,7 +533,7 @@ function tabCard(s,cid){const c=s.c,id=s.u.id,d=`data-c="${cid}" data-v="${id}"`
 function vAdminBody(){return UI.atab==='reg'?vReg():UI.atab==='data'?vData():vForms()}
 function vAdmin(){const b=vAdminBody();
  return `<div class="top"><button data-a="home">⌂</button><h1>Admin</h1>${status()}<div style="width:100%">${seg([['feuilles','Feuilles'],['reg','Réglages'],['data','Connexion & données']],UI.atab,'at')}</div></div><main>${b}</main>`}
-function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on':''}" data-a="only">${UI.only?'✔ ':''}Seulement les dossiers incomplets</button><button data-a="print">Imprimer</button>${RO()?'':'<button class="go" data-a="cpe">📄 PDF dossiers incomplets (CPE)</button>'}</div>`;
+function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on':''}" data-a="only">${UI.only?'✔ ':''}Seulement les dossiers incomplets</button><button data-a="print">Imprimer</button>${RO()?'':`<button class="go" data-a="cpemail">✉️ Envoyer au CPE par Gmail</button><button class="link" data-a="cpemailto">autre appli mail</button><button data-a="cpe">📄 PDF</button>`}</div>`;
  for(const cls in STUDENTS){const L=clsStu(cls),f=s=>S.forms?.[s.id]||{};
   h+=`<h2>${cls} <span class="small mut">— sortie ${L.filter(s=>f(s).s).length}/${L.length} · droit à l'image ${L.filter(s=>f(s).i).length}/${L.length} · absents ${L.filter(s=>absent(s.id)).length}</span></h2>
   <div class="tw"><table><tr><th>Élève</th><th class="c">Feuille sortie</th><th class="c">Droit à l'image</th><th class="c">Absent le 9/11</th></tr>
@@ -541,7 +541,7 @@ function vForms(){let h=`<div class="flex noprint"><button class="${UI.only?'on'
   <td class="c"><input type="checkbox" data-f="forms/${s.id}/s" ${f(s).s?'checked':''}></td><td class="c"><input type="checkbox" data-f="forms/${s.id}/i" ${f(s).i?'checked':''}></td><td class="c"><input type="checkbox" data-f="absent/${s.id}" ${absent(s.id)?'checked':''}></td></tr>`).join('')}</table></div>`}
  return h}
 function vReg(){const g=G();const f=(k,l,t='text')=>`<label>${l}<input type="${t}" data-s="settings/g/${k}" value="${esc(g[k])}"></label>`;
- let h=`<div class="form"><h2>Général</h2>${f('rally','Point de rassemblement')}${f('name4A','Prof 4A')}${f('phone4A','Téléphone prof 4A','tel')}${f('name4B','Prof 4B')}${f('phone4B','Téléphone prof 4B','tel')}${f('nameU','Accompagnateur 1')}${f('phoneU','Téléphone accompagnateur 1','tel')}${f('nameM','Accompagnateur 2')}${f('phoneM','Téléphone accompagnateur 2','tel')}
+ let h=`<div class="form"><h2>Général</h2>${f('rally','Point de rassemblement')}${f('name4A','Prof 4A')}${f('phone4A','Téléphone prof 4A','tel')}${f('name4B','Prof 4B')}${f('phone4B','Téléphone prof 4B','tel')}${f('nameU','Accompagnateur 1')}${f('phoneU','Téléphone accompagnateur 1','tel')}${f('mail4A','Gmail de '+g.name4A+' (envoi au CPE)','email')}${f('mail4B','Gmail de '+g.name4B+' (envoi au CPE)','email')}${f('mailCPE','Mail du CPE','email')}${f('nameM','Accompagnateur 2')}${f('phoneM','Téléphone accompagnateur 2','tel')}
  ${f('alert','Alerte ORANGE : un binôme cherche une balise depuis plus de (min)','number')}${f('alertRed','Alerte ROUGE + bandeau « À surveiller » : depuis plus de (min)','number')}${f('base','Note de comportement de départ (/20)','number')}${f('pin','Code pour quitter le mode tablette')}
  <label>Relais étoile : qui se relaie ?<select data-s="settings/g/relayMode"><option value="binomes" ${g.relayMode==='binomes'?'selected':''}>Deux binômes se relaient (respecte « binôme indissociable »)</option><option value="eleves" ${g.relayMode==='eleves'?'selected':''}>Les 2 élèves du binôme se relaient (comme le livre)</option></select></label>`;
  ORDER.forEach(id=>{const c=C(id),p=`settings/courses/${id}/`;
@@ -671,6 +671,8 @@ const A={
   h+=`<p class="foot">Professeurs d'EPS : ${esc(g.name4A)} (4A) et ${esc(g.name4B)} (4B).</p>`;
   $('#printdoc').innerHTML=h;const t=document.title;document.title='Dossiers incomplets - Sortie Azimut Parc de Sceaux - 9 novembre 2026';document.body.classList.add('printcpe');
   const done=()=>{document.body.classList.remove('printcpe');document.title=t;removeEventListener('afterprint',done)};addEventListener('afterprint',done);setTimeout(()=>print(),50)},
+ cpemail(){const m=cpeMail();if(!m)return;open(`https://mail.google.com/mail/?view=cm&fs=1&authuser=${encodeURIComponent(m.from)}&to=${encodeURIComponent(m.to)}&su=${encodeURIComponent(m.su)}&body=${encodeURIComponent(m.body)}`,'_blank')},
+ cpemailto(){const m=cpeMail();if(!m)return;location.href=`mailto:${m.to}?subject=${encodeURIComponent(m.su)}&body=${encodeURIComponent(m.body)}`},
  resetrun(d){ask('Effacer le chrono et les balises de ce binôme sur ce parcours ?',()=>DB.update({[RP(d.c,UI.cls,d.v)]:null}))},
  swap(){const [a,b]=UI.sel,bs=binomes(UI.cls),A1=bs.find(x=>x.m.includes(a)),B1=bs.find(x=>x.m.includes(b));
   UI.sel=[];DB.update({[`binomes/${UI.cls}/${A1.id}/m`]:A1.m.map(x=>x===a?b:x),[`binomes/${UI.cls}/${B1.id}/m`]:B1.m.map(x=>x===b?a:x)});toast('Échange fait')},
@@ -729,6 +731,15 @@ const A={
   LS.set('co-cfg',{fb,session:($('#sess').value.trim()||DEFAULT_SESSION).replace(/[.#$\[\]\/]/g,'-')});location.reload()},
  wipe(){if($('#wipe').value!=='EFFACER')return toast('Tapez EFFACER');DB.update({binomes:null,teams:null,runs:null,behav:null,active:null,activePrev:null,clock:null,cycle:null});toast('Données effacées')},
 };
+/* mail au CPE : liste des dossiers incomplets en texte, envoyé depuis le Gmail du prof de la session */
+function cpeMail(){const g=G(),me=UI.me==='4B'?'4B':'4A',from=g['mail'+me],to=g.mailCPE;if(!to)return toast('Renseignez le mail du CPE dans Réglages'),null;
+ const f=s=>S.forms?.[s.id]||{},L=a=>a.length?a.map(s=>'  - '+s.nom+' '+s.prenom).join('\n'):'  (aucun)';
+ const today=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' à '+hm(Date.now());
+ let b=`Bonjour,\n\nVoici la liste des dossiers incomplets pour la sortie Azimut (course d'orientation) au Parc de Sceaux, le lundi 9 novembre 2026, classes de 4A et 4B.\nListe arrêtée le ${today}.\n`;
+ for(const cls in STUDENTS){const A2=clsStu(cls),noS=A2.filter(s=>!f(s).s),noI=A2.filter(s=>f(s).s&&!f(s).i),ab=A2.filter(s=>absent(s.id));
+  b+=`\n== ${cls} ==\nFeuille de sortie non rendue, l'élève ne peut pas partir (${noS.length}) :\n${L(noS)}\nDroit à l'image non rendu, l'élève part mais ne doit pas être photographié (${noI.length}) :\n${L(noI)}\n`+(ab.length?`Signalés absents (${ab.length}) :\n${L(ab)}\n`:'')}
+ b+=`\nBien cordialement,\n${g['name'+me]}\nProfesseur d'EPS`;
+ return {from,to,su:"Dossiers incomplets - Sortie Azimut Parc de Sceaux - lundi 9 novembre 2026",body:b}}
 function confirmSolo(){toast('Choisissez au moins 2 élèves');return false}
 function nextTN(cls){return Math.max(0,...teams(cls).map(t=>t.n))+1}
 function nextN(cls){return Math.max(0,...binomes(cls).map(b=>b.n))+1}
